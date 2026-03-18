@@ -1,0 +1,39 @@
+@import "tailwindcss";
+
+@theme {
+  /* Defining a custom Navy Blue for the brand */
+  --color-navy-900: #000080;
+  --color-navy-800: #000070;
+}
+
+@utility btn {
+  @apply px-4 py-2 rounded-lg transition-all font-medium flex items-center justify-center disabled:opacity-50;
+}
+
+@layer base {
+  body { 
+    @apply bg-white text-black antialiased; 
+  }
+}
+
+@layer components {
+  /* Using @utility or standard classes is preferred in v4, 
+     but @layer components still works for organization */
+  .btn-primary { 
+    @apply bg-[navy] text-white hover:bg-[#000070]; 
+  }
+  .text-brand {
+    @apply text-[navy];
+  }
+  .btn-secondary { 
+    @apply bg-gray-100 text-gray-900 hover:bg-gray-200; 
+  }
+  
+  .input { 
+    @apply w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black outline-none transition-all; 
+  }
+  
+  .modal-overlay { 
+    @apply fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm; 
+  }
+}

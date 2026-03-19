@@ -1,259 +1,131 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Mail, Lock, User, Eye, EyeOff, Cloud } from 'lucide-react';
+import { Mail, Lock, User, Eye, EyeOff, Cloud, Loader2, CheckCircle } from 'lucide-react';
+import toast from 'react-hot-toast';
+
+const PERKS = ['15 GB free storage', 'AES-256 encryption', 'File sharing & public links', 'Access from any device'];
 
 const Register = () => {
   const navigate = useNavigate();
   const { register } = useAuth();
-  
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-  });
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState({});
 
-  const handleChange = (e) => {
+  const [form,    setForm]    = useState({ name: '', email: '', password: '', confirmPassword: '' });
+  const [showPwd, setShowPwd] = useState({ pwd: false, confirm: false });
+  const [loading, setLoading] = useState(false);
+  const [errors,  setErrors]  = useState({});
+
+  const onChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    // Clear error when user starts typing
-    if (errors[name]) {
-      setErrors((prev) => ({ ...prev, [name]: '' }));
-    }
+    setForm((p) => ({ ...p, [name]: value }));
+    if (errors[name]) setErrors((p) => ({ ...p, [name]: '' }));
   };
 
   const validate = () => {
-    const newErrors = {};
-    
-    if (!formData.name.trim()) {
-      newErrors.name = 'Name is required';
-    }
-    
-    if (!formData.email) {
-      newErrors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Email is invalid';
-    }
-    
-    if (!formData.password) {
-      newErrors.password = 'Password is required';
-    } else if (formData.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
-    }
-    
-    if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
-    }
-    
-    return newErrors;
+    const e = {};
+    if (!form.name.trim())               e.name = 'Name is required';
+    if (!form.email)                     e.email = 'Email is required';
+    else if (!/\S+@\S+\.\S+/.test(form.email)) e.email = 'Invalid email';
+    if (!form.password)                  e.password = 'Password is required';
+    else if (form.password.length < 6)   e.password = 'At least 6 characters';
+    if (form.password !== form.confirmPassword) e.confirmPassword = 'Passwords do not match';
+    return e;
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    const newErrors = validate();
-    
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      return;
-    }
-
+  const handleSubmit = async (ev) => {
+    ev.preventDefault();
+    const e = validate();
+    if (Object.keys(e).length) { setErrors(e); return; }
     setLoading(true);
-    const { confirmPassword, ...registerData } = formData;
-    const result = await register(registerData);
+    const { confirmPassword, ...data } = form;
+    const result = await register(data);
     setLoading(false);
-    
-    if (result.success) {
-      navigate('/');
-    }
+    if (result.success) { toast.success('Account created! Welcome 🎉'); navigate('/', { replace: true }); }
   };
+
+  const Field = ({ label, name, type = 'text', placeholder, showToggle, showVal, onToggle }) => (
+    <div>
+      <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-2)', display: 'block', marginBottom: 6 }}>{label}</label>
+      <div style={{ position: 'relative' }}>
+        <input
+          type={showToggle ? (showVal ? 'text' : 'password') : type}
+          name={name}
+          value={form[name]}
+          onChange={onChange}
+          className="input"
+          placeholder={placeholder}
+          style={{ borderColor: errors[name] ? 'var(--danger)' : undefined, paddingRight: showToggle ? 36 : undefined }}
+        />
+        {showToggle && (
+          <button type="button" onClick={onToggle} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer' }}>
+            {showVal ? <EyeOff size={15} /> : <Eye size={15} />}
+          </button>
+        )}
+      </div>
+      {errors[name] && <p style={{ fontSize: '0.75rem', color: 'var(--danger)', marginTop: 4 }}>{errors[name]}</p>}
+    </div>
+  );
 
   return (
-    <div className="min-h-screen flex bg-gray-50">
-      {/* Right Side - Branding (Reversed for variation) */}
-      <div className="hidden lg:flex lg:w-1/2 bg-primary-600 items-center justify-center p-12 order-last">
-        <div className="max-w-md text-pink">
-          <div className="flex items-center gap-3 mb-8">
-            <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-xl flex items-center justify-center">
-              <Cloud className="w-8 h-8 text-white" />
+    <div className="auth-bg" style={{ display: 'flex', minHeight: '100vh' }}>
+      {/* Form side */}
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+        <div className="auth-card">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 28, justifyContent: 'center' }}>
+            <div style={{ width: 34, height: 34, borderRadius: 8, background: 'var(--brand)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Cloud size={18} color="#fff" />
             </div>
-            <span className="text-3xl font-bold tracking-tight">SkyVault</span>
-          </div>
-          <h1 className="text-4xl font-bold mb-6">Join millions of people who trust CloudDrive</h1>
-          <p className="text-lg text-primary-100 leading-relaxed">
-            Create an account today and get 15 GB of free storage. Experience the next level of file management.
-          </p>
-          
-          <ul className="mt-12 space-y-4">
-            {['Bank-level security', 'Real-time collaboration', 'Cross-platform sync', 'Smart organization'].map((item) => (
-              <li key={item} className="flex items-center gap-3 text-primary-50">
-                <div className="w-5 h-5 bg-white/20 rounded-full flex items-center justify-center">
-                  <svg className="w-3 h-3 fill-current" viewBox="0 0 20 20"><path d="M0 11l2-2 5 5L18 3l2 2L7 18z"/></svg>
-                </div>
-                {item}
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
-
-      {/* Left Side - Register Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8">
-        <div className="w-full max-w-md">
-          <div className="lg:hidden flex items-center gap-3 mb-8 justify-center">
-            <Cloud className="w-10 h-10 text-primary-600" />
-            <span className="text-2xl font-bold text-gray-900">CloudDrive</span>
+            <span style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: '1.15rem' }}>SkyVault</span>
           </div>
 
-          <div className="text-center lg:text-left mb-10">
-            <h2 className="text-3xl font-bold text-gray-900">Create account</h2>
-            <p className="text-gray-600 mt-2">Start your 15 GB free storage today</p>
+          <div style={{ marginBottom: 24 }}>
+            <h1 style={{ fontSize: '1.5rem', marginBottom: 4 }}>Create account</h1>
+            <p style={{ color: 'var(--text-3)', fontSize: '0.875rem' }}>Get 15 GB free storage, no credit card needed</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Name Field */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Full name</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <User className={`w-5 h-5 ${errors.name ? 'text-red-400' : 'text-gray-400'}`} />
-                </div>
-                <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  className={`w-full pl-10 pr-4 py-3 bg-white border rounded-lg outline-none transition-all ${
-                    errors.name 
-                      ? 'border-red-300 focus:ring-4 focus:ring-red-50' 
-                      : 'border-gray-200 focus:border-primary-500 focus:ring-4 focus:ring-primary-50'
-                  }`}
-                  placeholder="John Doe"
-                />
-              </div>
-              {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
-            </div>
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <Field label="Full name" name="name" placeholder="John Doe" />
+            <Field label="Email address" name="email" type="email" placeholder="you@example.com" />
+            <Field label="Password" name="password" placeholder="Min. 6 characters"
+              showToggle onToggle={() => setShowPwd((p) => ({ ...p, pwd: !p.pwd }))} showVal={showPwd.pwd} />
+            <Field label="Confirm password" name="confirmPassword" placeholder="Repeat password"
+              showToggle onToggle={() => setShowPwd((p) => ({ ...p, confirm: !p.confirm }))} showVal={showPwd.confirm} />
 
-            {/* Email Field */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Email address</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Mail className={`w-5 h-5 ${errors.email ? 'text-red-400' : 'text-gray-400'}`} />
-                </div>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  className={`w-full pl-10 pr-4 py-3 bg-white border rounded-lg outline-none transition-all ${
-                    errors.email 
-                      ? 'border-red-300 focus:ring-4 focus:ring-red-50' 
-                      : 'border-gray-200 focus:border-primary-500 focus:ring-4 focus:ring-primary-50'
-                  }`}
-                  placeholder="name@example.com"
-                />
-              </div>
-              {errors.email && <p className="mt-1 text-sm text-red-600">{errors.email}</p>}
-            </div>
-
-            {/* Password Field */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className={`w-5 h-5 ${errors.password ? 'text-red-400' : 'text-gray-400'}`} />
-                </div>
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  className={`w-full pl-10 pr-12 py-3 bg-white border rounded-lg outline-none transition-all ${
-                    errors.password 
-                      ? 'border-red-300 focus:ring-4 focus:ring-red-50' 
-                      : 'border-gray-200 focus:border-primary-500 focus:ring-4 focus:ring-primary-50'
-                  }`}
-                  placeholder="••••••••"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
-                >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
-              </div>
-              {errors.password && <p className="mt-1 text-sm text-red-600">{errors.password}</p>}
-            </div>
-
-            {/* Confirm Password Field */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Confirm password</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className={`w-5 h-5 ${errors.confirmPassword ? 'text-red-400' : 'text-gray-400'}`} />
-                </div>
-                <input
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  name="confirmPassword"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  className={`w-full pl-10 pr-12 py-3 bg-white border rounded-lg outline-none transition-all ${
-                    errors.confirmPassword 
-                      ? 'border-red-300 focus:ring-4 focus:ring-red-50' 
-                      : 'border-gray-200 focus:border-primary-500 focus:ring-4 focus:ring-primary-50'
-                  }`}
-                  placeholder="••••••••"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
-                >
-                  {showConfirmPassword ? (
-                    <EyeOff className="w-5 h-5" />
-                  ) : (
-                    <Eye className="w-5 h-5" />
-                  )}
-                </button>
-              </div>
-              {errors.confirmPassword && (
-                <p className="mt-1 text-sm text-red-600">{errors.confirmPassword}</p>
-              )}
-            </div>
-
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-primary-600 text-pink py-3 rounded-lg font-medium hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            >
-              {loading ? (
-                <>
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Creating account...
-                </>
-              ) : (
-                'Create Account'
-              )}
+            <button type="submit" className="btn btn-primary btn-lg" disabled={loading} style={{ marginTop: 4 }}>
+              {loading ? <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> : null}
+              {loading ? 'Creating account…' : 'Create Account'}
             </button>
           </form>
 
-          {/* Sign In Link */}
-          <p className="mt-6 text-center text-sm text-gray-600">
+          <p style={{ textAlign: 'center', fontSize: '0.8125rem', color: 'var(--text-3)', marginTop: 20 }}>
             Already have an account?{' '}
-            <Link
-              to="/login"
-              className="font-medium text-primary-600 hover:text-primary-700"
-            >
-              Sign in
-            </Link>
+            <Link to="/login" style={{ color: 'var(--brand-light)', fontWeight: 600, textDecoration: 'none' }}>Sign in</Link>
           </p>
+        </div>
+      </div>
+
+      {/* Branding side */}
+      <div className="auth-panel" style={{ display: 'none', width: '44%', margin: 24, borderRadius: 'var(--radius-xl)', flexDirection: 'column', justifyContent: 'center', gap: 32 }}
+        ref={(el) => { if (el) el.style.display = window.innerWidth >= 1024 ? 'flex' : 'none'; }}>
+        <div style={{ position: 'relative', zIndex: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 32 }}>
+            <Cloud size={28} color="#fff" />
+            <span style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: '1.4rem', color: '#fff' }}>SkyVault</span>
+          </div>
+          <h2 style={{ fontFamily: 'Syne, sans-serif', fontSize: '2rem', fontWeight: 800, color: '#fff', lineHeight: 1.2, marginBottom: 12 }}>
+            Join millions who trust us with their files
+          </h2>
+          <p style={{ color: 'rgba(255,255,255,0.7)', lineHeight: 1.7, fontSize: '0.9375rem' }}>
+            Cloud storage built for speed, security, and simplicity.
+          </p>
+        </div>
+        <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {PERKS.map((perk) => (
+            <div key={perk} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <CheckCircle size={16} color="rgba(255,255,255,0.8)" />
+              <span style={{ color: 'rgba(255,255,255,0.85)', fontSize: '0.9375rem' }}>{perk}</span>
+            </div>
+          ))}
         </div>
       </div>
     </div>

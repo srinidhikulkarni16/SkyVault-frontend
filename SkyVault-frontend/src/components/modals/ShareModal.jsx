@@ -1,51 +1,41 @@
 import React, { useState, useEffect } from 'react';
-import { X, Link as LinkIcon, Copy, Check, Users, Mail, Globe, Lock, Calendar } from 'lucide-react';
+import { X, Users, Mail, Globe, Lock, Calendar, Copy, Check, Trash2, Share2 } from 'lucide-react';
 import { shareAPI } from '../../lib/api';
 import { copyToClipboard } from '../../lib/utils';
 import toast from 'react-hot-toast';
 
 const ShareModal = ({ isOpen, onClose, item }) => {
-  const [activeTab, setActiveTab] = useState('users'); // 'users' or 'link'
-  const [email, setEmail] = useState('');
-  const [role, setRole] = useState('viewer');
-  const [shares, setShares] = useState({ userShares: [], linkShares: [] });
-  const [loading, setLoading] = useState(false);
-  const [linkPassword, setLinkPassword] = useState('');
-  const [linkExpiry, setLinkExpiry] = useState('');
-  const [copiedLink, setCopiedLink] = useState(false);
+  const [tab,       setTab]       = useState('users');
+  const [email,     setEmail]     = useState('');
+  const [role,      setRole]      = useState('viewer');
+  const [shares,    setShares]    = useState({ userShares: [], linkShares: [] });
+  const [loading,   setLoading]   = useState(false);
+  const [linkPwd,   setLinkPwd]   = useState('');
+  const [linkExp,   setLinkExp]   = useState('');
+  const [copied,    setCopied]    = useState(null);
 
   useEffect(() => {
-    if (isOpen && item) {
-      loadShares();
-    }
+    if (isOpen && item) { loadShares(); setTab('users'); }
   }, [isOpen, item]);
 
   const loadShares = async () => {
     try {
       const { data } = await shareAPI.getShares(item.type, item.id);
-      setShares(data);
-    } catch (error) {
-      console.error('Failed to load shares:', error);
-    }
+      setShares(data || { userShares: [], linkShares: [] });
+    } catch { /* silent */ }
   };
 
-  const handleShareWithUser = async (e) => {
+  const handleShareUser = async (e) => {
     e.preventDefault();
     if (!email.trim()) return;
-
     setLoading(true);
     try {
-      await shareAPI.shareWithUser({
-        resource_type: item.type,
-        resource_id: item.id,
-        user_email: email,
-        role,
-      });
-      toast.success('Resource shared successfully');
+      await shareAPI.shareWithUser({ resource_type: item.type, resource_id: item.id, user_email: email, role });
+      toast.success('Shared successfully');
       setEmail('');
       loadShares();
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to share');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to share');
     } finally {
       setLoading(false);
     }
@@ -54,219 +44,172 @@ const ShareModal = ({ isOpen, onClose, item }) => {
   const handleCreateLink = async () => {
     setLoading(true);
     try {
-      await shareAPI.createPublicLink({
-        resource_type: item.type,
-        resource_id: item.id,
-        password: linkPassword,
-        expires_at: linkExpiry || null,
-      });
+      await shareAPI.createPublicLink({ resource_type: item.type, resource_id: item.id, password: linkPwd || undefined, expires_at: linkExp || null });
       toast.success('Public link created');
+      setLinkPwd(''); setLinkExp('');
       loadShares();
-    } catch (error) {
-      toast.error('Failed to create link');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to create link');
     } finally {
       setLoading(false);
     }
   };
 
   const handleDeleteLink = async (id) => {
-    try {
-      await shareAPI.deletePublicLink(id);
-      loadShares();
-    } catch (error) {
-      toast.error('Failed to delete link');
-    }
+    try { await shareAPI.deletePublicLink(id); loadShares(); toast.success('Link deleted'); }
+    catch { toast.error('Failed'); }
   };
 
-  const copyLink = (token) => {
+  const handleCopy = async (token) => {
     const url = `${window.location.origin}/share/${token}`;
-    copyToClipboard(url);
-    setCopiedLink(true);
-    toast.success('Link copied to clipboard');
-    setTimeout(() => setCopiedLink(false), 2000);
+    await copyToClipboard(url);
+    setCopied(token);
+    toast.success('Link copied');
+    setTimeout(() => setCopied(null), 2000);
+  };
+
+  const handleRevokeUser = async (shareId) => {
+    try { await shareAPI.deleteShare(shareId); loadShares(); toast.success('Access revoked'); }
+    catch { toast.error('Failed to revoke'); }
   };
 
   if (!isOpen || !item) return null;
 
   return (
     <div className="modal-overlay">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg animate-slide-in">
+      <div className="modal-card modal-card-lg">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center text-primary-600">
-              <Users className="w-5 h-5" />
+        <div className="modal-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 34, height: 34, borderRadius: 8, background: 'rgba(79,110,247,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Share2 size={16} style={{ color: 'var(--brand-light)' }} />
             </div>
             <div>
-              <h2 className="text-xl font-semibold text-gray-900">Share "{item.name}"</h2>
-              <p className="text-xs text-gray-500 uppercase tracking-wider font-bold">
-                {item.type} share
-              </p>
+              <h2 style={{ fontSize: '1rem', fontWeight: 700 }}>Share</h2>
+              <p className="truncate" style={{ fontSize: '0.75rem', color: 'var(--text-3)', maxWidth: 280 }}>"{item.name}"</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg">
-            <X className="w-5 h-5" />
-          </button>
+          <button className="btn btn-icon btn-ghost" onClick={onClose}><X size={16} /></button>
         </div>
 
         {/* Tabs */}
-        <div className="flex border-b border-gray-200">
-          <button
-            onClick={() => setActiveTab('users')}
-            className={`flex-1 py-3 text-sm font-medium border-b-2 transition-colors ${
-              activeTab === 'users' ? 'border-primary-600 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            Share with people
+        <div className="tab-bar">
+          <button className={`tab ${tab === 'users' ? 'active' : ''}`} onClick={() => setTab('users')}>
+            <Users size={13} style={{ display: 'inline', marginRight: 6 }} />People
           </button>
-          <button
-            onClick={() => setActiveTab('link')}
-            className={`flex-1 py-3 text-sm font-medium border-b-2 transition-colors ${
-              activeTab === 'link' ? 'border-primary-600 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            Get public link
+          <button className={`tab ${tab === 'link' ? 'active' : ''}`} onClick={() => setTab('link')}>
+            <Globe size={13} style={{ display: 'inline', marginRight: 6 }} />Public Link
           </button>
         </div>
 
-        {/* Content */}
-        <div className="p-6">
-          {activeTab === 'users' ? (
-            <div className="space-y-6">
-              <form onSubmit={handleShareWithUser} className="flex gap-2">
-                <div className="relative flex-1">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Add by email..."
-                    className="input pl-10 h-10"
-                  />
+        <div className="modal-body" style={{ minHeight: 240 }}>
+          {/* ── Users tab ─────────────────────────────────────── */}
+          {tab === 'users' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+              <form onSubmit={handleShareUser} style={{ display: 'flex', gap: 8 }}>
+                <div style={{ position: 'relative', flex: 1 }}>
+                  <Mail size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-3)', pointerEvents: 'none' }} />
+                  <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Add by email…" className="input" style={{ paddingLeft: 30 }} />
                 </div>
-                <select
-                  value={role}
-                  onChange={(e) => setRole(e.target.value)}
-                  className="input w-32 h-10"
-                >
+                <select value={role} onChange={(e) => setRole(e.target.value)} className="input" style={{ width: 110 }}>
                   <option value="viewer">Viewer</option>
                   <option value="editor">Editor</option>
                 </select>
-                <button type="submit" disabled={loading} className="btn btn-primary h-10 whitespace-nowrap">
-                  Share
-                </button>
+                <button type="submit" className="btn btn-primary" disabled={loading || !email.trim()}>Share</button>
               </form>
 
-              <div className="space-y-4">
-                <h3 className="text-sm font-semibold text-gray-700">Who has access</h3>
-                <div className="max-h-48 overflow-y-auto pr-2 custom-scrollbar space-y-3">
-                  {shares.userShares.map((share) => (
-                    <div key={share.id} className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-xs font-semibold text-gray-600">
-                          {share.user_name?.charAt(0).toUpperCase()}
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">{share.user_name}</p>
-                          <p className="text-xs text-gray-500">{share.user_email}</p>
-                        </div>
-                      </div>
-                      <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded capitalize">
-                        {share.role}
-                      </span>
-                    </div>
-                  ))}
-                  {shares.userShares.length === 0 && (
-                    <p className="text-sm text-gray-500 text-center py-4">Not shared with anyone yet</p>
-                  )}
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-6">
-              {shares.linkShares.length === 0 ? (
-                <div className="space-y-4">
-                  <div className="p-4 bg-gray-50 rounded-lg space-y-4">
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                      <input
-                        type="password"
-                        value={linkPassword}
-                        onChange={(e) => setLinkPassword(e.target.value)}
-                        placeholder="Add password (optional)"
-                        className="input pl-10"
-                      />
-                    </div>
-                    <div className="relative">
-                      <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                      <input
-                        type="datetime-local"
-                        value={linkExpiry}
-                        onChange={(e) => setLinkExpiry(e.target.value)}
-                        className="input pl-10"
-                      />
-                    </div>
-                  </div>
-                  <button onClick={handleCreateLink} disabled={loading} className="w-full btn btn-primary flex items-center justify-center gap-2">
-                    <Globe className="w-4 h-4" />
-                    Create Public Link
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <h3 className="text-sm font-semibold text-gray-700">Active public links</h3>
-                  <div className="space-y-4">
-                    {shares.linkShares.map((link) => (
-                      <div key={link.id} className="p-4 bg-gray-50 border border-gray-200 rounded-lg flex items-start justify-between">
-                        <div className="flex-1 mr-4">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Globe className="w-4 h-4 text-primary-600" />
-                            <span className="text-sm font-medium text-gray-900">Public Link</span>
-                            {link.has_password && <Lock className="w-3 h-3 text-gray-400" />}
+              <div>
+                <p style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>Who has access</p>
+                {shares.userShares?.length > 0 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 200, overflowY: 'auto' }}>
+                    {shares.userShares.map((s) => (
+                      <div key={s.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--surface-4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-2)' }}>
+                            {(s.user_name || s.user_email || '?')[0].toUpperCase()}
                           </div>
-                          <div className="flex flex-col">
-                            <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg p-2">
-                              <span className="text-xs text-gray-500 truncate flex-1">
-                                {`${window.location.origin}/share/${link.token}`}
-                              </span>
-                              <button
-                                onClick={() => copyLink(link.token)}
-                                className="p-1 hover:text-primary-700"
-                              >
-                                {copiedLink ? (
-                                  <Check className="w-4 h-4" />
-                                ) : (
-                                  <Copy className="w-4 h-4" />
-                                )}
-                              </button>
-                            </div>
-                            {link.expires_at && (
-                              <p className="text-xs text-gray-500 mt-2">
-                                Expires: {new Date(link.expires_at).toLocaleString()}
-                              </p>
-                            )}
+                          <div>
+                            <p style={{ fontSize: '0.8125rem', fontWeight: 500, color: 'var(--text-1)' }}>{s.user_name || s.user_email}</p>
+                            <p style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>{s.user_email}</p>
                           </div>
                         </div>
-                        <button
-                          onClick={() => handleDeleteLink(link.id)}
-                          className="text-sm text-red-600 hover:text-red-700"
-                        >
-                          Delete link
-                        </button>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', padding: '3px 8px', borderRadius: 99, background: 'var(--surface-4)', color: 'var(--text-3)' }}>{s.role}</span>
+                          <button className="btn btn-icon btn-ghost" style={{ padding: 4 }} onClick={() => handleRevokeUser(s.id)} title="Revoke">
+                            <X size={13} style={{ color: 'var(--danger)' }} />
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
+                ) : (
+                  <p style={{ fontSize: '0.8125rem', color: 'var(--text-3)', textAlign: 'center', padding: '16px 0' }}>Not shared with anyone yet</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ── Link tab ───────────────────────────────────────── */}
+          {tab === 'link' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {shares.linkShares?.length === 0 ? (
+                <>
+                  <div style={{ background: 'var(--surface-3)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <div style={{ position: 'relative' }}>
+                      <Lock size={13} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-3)', pointerEvents: 'none' }} />
+                      <input type="password" value={linkPwd} onChange={(e) => setLinkPwd(e.target.value)} placeholder="Password (optional)" className="input" style={{ paddingLeft: 30 }} />
+                    </div>
+                    <div style={{ position: 'relative' }}>
+                      <Calendar size={13} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-3)', pointerEvents: 'none' }} />
+                      <input type="datetime-local" value={linkExp} onChange={(e) => setLinkExp(e.target.value)} className="input" style={{ paddingLeft: 30 }} />
+                    </div>
+                  </div>
+                  <button className="btn btn-primary" onClick={handleCreateLink} disabled={loading} style={{ width: '100%' }}>
+                    <Globe size={14} />
+                    {loading ? 'Creating…' : 'Create Public Link'}
+                  </button>
+                </>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <p style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Active Links</p>
+                  {shares.linkShares.map((link) => (
+                    <div key={link.id} style={{ background: 'var(--surface-3)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: 12 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <Globe size={13} style={{ color: 'var(--brand)' }} />
+                          <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-1)' }}>Public Link</span>
+                          {link.has_password && <Lock size={11} style={{ color: 'var(--text-3)' }} />}
+                        </div>
+                        <button className="btn btn-sm" onClick={() => handleDeleteLink(link.id)} style={{ color: 'var(--danger)', background: 'none', padding: '2px 6px', fontSize: '0.75rem' }}>
+                          <Trash2 size={12} /> Remove
+                        </button>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '6px 10px' }}>
+                        <span className="truncate" style={{ flex: 1, fontSize: '0.75rem', color: 'var(--text-3)' }}>
+                          {`${window.location.origin}/share/${link.token}`}
+                        </span>
+                        <button className="btn btn-icon btn-ghost" style={{ padding: 4, flexShrink: 0 }} onClick={() => handleCopy(link.token)}>
+                          {copied === link.token ? <Check size={13} style={{ color: 'var(--success)' }} /> : <Copy size={13} />}
+                        </button>
+                      </div>
+                      {link.expires_at && (
+                        <p style={{ fontSize: '0.7rem', color: 'var(--text-3)', marginTop: 6 }}>
+                          Expires: {new Date(link.expires_at).toLocaleString()}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                  <button className="btn btn-secondary btn-sm" onClick={() => setShares((p) => ({ ...p, linkShares: [] }))}>
+                    + Create another link
+                  </button>
                 </div>
               )}
             </div>
           )}
         </div>
 
-        {/* Footer */}
-        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200">
-          <button onClick={onClose} className="btn btn-secondary">
-            Done
-          </button>
+        <div className="modal-footer">
+          <button className="btn btn-secondary" onClick={onClose}>Done</button>
         </div>
       </div>
     </div>

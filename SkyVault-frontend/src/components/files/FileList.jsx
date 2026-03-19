@@ -1,144 +1,89 @@
-import React, { useState } from 'react';
-import {
-  MoreVertical,
-  Download,
-  Trash2,
-  Edit,
-  Share2,
-  Star,
-  Move,
-  FileText,
-  Image as ImageIcon,
-  File,
-  Folder,
-} from 'lucide-react';
-import { formatFileSize, formatDate, getFileIcon } from '../../lib/utils';
+import React, { useState, useRef, useEffect } from 'react';
+import { MoreVertical, Download, Trash2, Edit, Share2, Star, Move, Folder } from 'lucide-react';
+import { formatFileSize, formatDate } from '../../lib/utils';
 import { useFileStore } from '../../store/fileStore';
+import FileIcon from '../common/FileIcon';
+import { cn } from '../../lib/utils';
 
-const iconMap = {
-  File: File,
-  FileText: FileText,
-  Image: ImageIcon,
-  Video: File,
-  Music: File,
-  Archive: File,
-  Code: FileText,
-  Sheet: File,
-  Presentation: File,
-};
-
-const FileListItem = ({ item, onDownload, onRename, onMove, onDelete, onShare, onStar, onClick }) => {
-  const [showMenu, setShowMenu] = useState(false);
+const ListRow = ({ item, onDownload, onRename, onMove, onDelete, onShare, onStar, onClick }) => {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef(null);
   const { selectedItems, toggleItemSelection } = useFileStore();
-  
-  const isFolder = item.type === 'folder';
+  const isFolder   = item.type === 'folder';
   const isSelected = selectedItems.some((i) => i.id === item.id && i.type === item.type);
-  const IconComponent = isFolder ? Folder : (iconMap[getFileIcon(item.mime_type, item.name)] || File);
 
-  const handleMenuClick = (e, action) => {
-    e.stopPropagation();
-    setShowMenu(false);
-    action();
-  };
+  useEffect(() => {
+    const handler = (e) => { if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false); };
+    if (menuOpen) document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [menuOpen]);
+
+  const action = (fn) => (e) => { e.stopPropagation(); setMenuOpen(false); fn(); };
 
   return (
-    <div
-      className={`group flex items-center gap-4 px-4 py-3 hover:bg-gray-50 transition-colors cursor-pointer border-b border-gray-100 last:border-0 ${
-        isSelected ? 'bg-primary-50' : ''
-      }`}
-      onClick={() => onClick()}
-    >
-      <div 
-        className="w-4 flex items-center justify-center"
-        onClick={(e) => {
-          e.stopPropagation();
-          toggleItemSelection({ id: item.id, type: item.type });
-        }}
-      >
-        <div className={`w-4 h-4 rounded border ${
-          isSelected ? 'bg-primary-600 border-primary-600' : 'border-gray-300'
-        } flex items-center justify-center`}>
-          {isSelected && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
-        </div>
-      </div>
-
-      <div className="flex-1 flex items-center gap-3 min-w-0">
-        <IconComponent className={`w-5 h-5 flex-shrink-0 ${isFolder ? 'text-blue-500' : 'text-gray-500'}`} />
-        <span className="text-sm font-medium text-gray-900 truncate">{item.name}</span>
-      </div>
-
-      <div className="hidden md:block w-32 text-sm text-gray-500 truncate">
-        {item.owner?.name || 'Me'}
-      </div>
-
-      <div className="hidden lg:block w-32 text-sm text-gray-500">
-        {formatDate(item.updated_at)}
-      </div>
-
-      <div className="hidden sm:block w-24 text-right text-sm text-gray-500">
-        {isFolder ? '--' : formatFileSize(item.size_bytes)}
-      </div>
-
-      <div className="w-8 relative">
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            setShowMenu(!showMenu);
-          }}
-          className="p-1 hover:bg-gray-100 rounded-full transition-colors opacity-0 group-hover:opacity-100"
+    <div className={cn('list-row', isSelected && 'selected')} onClick={onClick}>
+      {/* Name col */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+        {/* Checkbox */}
+        <div
+          onClick={(e) => { e.stopPropagation(); toggleItemSelection({ id: item.id, type: item.type }); }}
+          style={{ width: 16, height: 16, borderRadius: 4, border: `1.5px solid ${isSelected ? 'var(--brand)' : 'var(--border)'}`, background: isSelected ? 'var(--brand)' : 'transparent', flexShrink: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all var(--transition)' }}
         >
-          <MoreVertical className="w-4 h-4 text-gray-400" />
-        </button>
+          {isSelected && <div style={{ width: 6, height: 6, borderRadius: 2, background: '#fff' }} />}
+        </div>
 
-        {showMenu && (
+        {isFolder
+          ? <Folder size={18} style={{ color: 'var(--brand)', flexShrink: 0 }} strokeWidth={1.75} />
+          : <FileIcon mimeType={item.mime_type} name={item.name} size={18} />
+        }
+
+        <span className="truncate" style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-1)' }}>
+          {item.name}
+        </span>
+        {item.is_starred && <Star size={11} style={{ color: '#F5A623', fill: '#F5A623', flexShrink: 0 }} />}
+      </div>
+
+      {/* Owner */}
+      <span style={{ fontSize: '0.8125rem', color: 'var(--text-3)' }} className="truncate">
+        {item.owner?.name || 'Me'}
+      </span>
+
+      {/* Modified */}
+      <span style={{ fontSize: '0.8125rem', color: 'var(--text-3)' }}>
+        {formatDate(item.updated_at || item.created_at)}
+      </span>
+
+      {/* Size */}
+      <span style={{ fontSize: '0.8125rem', color: 'var(--text-3)', textAlign: 'right' }}>
+        {isFolder ? '—' : formatFileSize(item.size_bytes)}
+      </span>
+
+      {/* Actions */}
+      <div ref={menuRef} style={{ position: 'relative', display: 'flex', justifyContent: 'flex-end' }}>
+        <button
+          onClick={(e) => { e.stopPropagation(); setMenuOpen(!menuOpen); }}
+          className="btn btn-icon btn-ghost"
+          style={{ padding: 4, opacity: 0 }}
+          onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+          onMouseLeave={(e) => { if (!menuOpen) e.currentTarget.style.opacity = '0'; }}
+          id={`menu-btn-${item.id}`}
+        >
+          <MoreVertical size={14} />
+        </button>
+        {menuOpen && (
           <>
-            <div className="fixed inset-0 z-20" onClick={() => setShowMenu(false)}></div>
-            <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-30">
-              {!isFolder && (
-                <button
-                  onClick={(e) => handleMenuClick(e, onDownload)}
-                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-3"
-                >
-                  <Download className="w-4 h-4" />
-                  Download
-                </button>
-              )}
-              <button
-                onClick={(e) => handleMenuClick(e, onRename)}
-                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-3"
-              >
-                <Edit className="w-4 h-4" />
-                Rename
-              </button>
-              <button
-                onClick={(e) => handleMenuClick(e, onMove)}
-                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-3"
-              >
-                <Move className="w-4 h-4" />
-                Move
-              </button>
-              <button
-                onClick={(e) => handleMenuClick(e, onShare)}
-                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-3"
-              >
-                <Share2 className="w-4 h-4" />
-                Share
-              </button>
-              <button
-                onClick={(e) => handleMenuClick(e, onStar)}
-                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-3"
-              >
-                <Star className={`w-4 h-4 ${item.is_starred ? 'fill-yellow-400 text-yellow-400' : ''}`} />
+            <div style={{ position: 'fixed', inset: 0, zIndex: 19 }} onClick={() => setMenuOpen(false)} />
+            <div className="context-menu" style={{ zIndex: 20 }}>
+              {!isFolder && <button className="context-item" onClick={action(onDownload)}><Download size={13} />Download</button>}
+              <button className="context-item" onClick={action(onRename)}><Edit size={13} />Rename</button>
+              <button className="context-item" onClick={action(onMove)}><Move size={13} />Move</button>
+              <button className="context-item" onClick={action(onShare)}><Share2 size={13} />Share</button>
+              <button className="context-item" onClick={action(onStar)}>
+                <Star size={13} style={item.is_starred ? { color: '#F5A623', fill: '#F5A623' } : {}} />
                 {item.is_starred ? 'Unstar' : 'Star'}
               </button>
-              <div className="border-t border-gray-200 my-1"></div>
-              <button
-                onClick={(e) => handleMenuClick(e, onDelete)}
-                className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-3"
-              >
-                <Trash2 className="w-4 h-4" />
-                Delete
-              </button>
+              <div className="context-divider" />
+              <button className="context-item danger" onClick={action(onDelete)}><Trash2 size={13} />Delete</button>
             </div>
           </>
         )}
@@ -147,37 +92,34 @@ const FileListItem = ({ item, onDownload, onRename, onMove, onDelete, onShare, o
   );
 };
 
-const FileList = ({ items, onDownload, onRename, onMove, onDelete, onShare, onStar, onClick }) => {
-  return (
-    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-      {/* Header */}
-      <div className="flex items-center gap-4 px-4 py-3 bg-gray-50 border-b border-gray-200 text-sm font-medium text-gray-700">
-        <div className="w-4"></div>
-        <div className="flex-1">Name</div>
-        <div className="hidden md:block w-32">Owner</div>
-        <div className="hidden lg:block w-32">Modified</div>
-        <div className="hidden sm:block w-24 text-right">Size</div>
-        <div className="w-8"></div>
-      </div>
+// Show menu button on row hover via CSS injection
+const style = document.createElement('style');
+style.textContent = `.list-row:hover button[id^="menu-btn-"] { opacity: 1 !important; }`;
+document.head.appendChild(style);
 
-      {/* Items */}
-      <div className="divide-y divide-gray-200">
-        {items.map((item) => (
-          <FileListItem
-            key={`${item.type}-${item.id}`}
-            item={item}
-            onDownload={() => onDownload(item)}
-            onRename={() => onRename(item)}
-            onMove={() => onMove(item)}
-            onDelete={() => onDelete(item)}
-            onShare={() => onShare(item)}
-            onStar={() => onStar(item)}
-            onClick={() => onClick(item)}
-          />
-        ))}
-      </div>
+const FileList = ({ items, onDownload, onRename, onMove, onDelete, onShare, onStar, onClick }) => (
+  <div className="card" style={{ overflow: 'hidden' }}>
+    <div className="list-header">
+      <div>Name</div>
+      <div>Owner</div>
+      <div>Modified</div>
+      <div style={{ textAlign: 'right' }}>Size</div>
+      <div />
     </div>
-  );
-};
+    {items.map((item) => (
+      <ListRow
+        key={`${item.type}-${item.id}`}
+        item={item}
+        onDownload={() => onDownload(item)}
+        onRename={() => onRename(item)}
+        onMove={() => onMove(item)}
+        onDelete={() => onDelete(item)}
+        onShare={() => onShare(item)}
+        onStar={() => onStar(item)}
+        onClick={() => onClick(item)}
+      />
+    ))}
+  </div>
+);
 
 export default FileList;

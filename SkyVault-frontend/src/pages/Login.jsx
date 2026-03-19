@@ -1,224 +1,162 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Mail, Lock, Eye, EyeOff, Cloud } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Cloud, Loader2, ShieldCheck, Zap, Globe } from 'lucide-react';
+import { GoogleLogin } from '@react-oauth/google';
+import toast from 'react-hot-toast';
+
+const FEATURES = [
+  { icon: ShieldCheck, label: 'AES-256 Encryption',       sub: 'Military-grade security' },
+  { icon: Zap,         label: 'Lightning Fast Uploads',   sub: 'Multipart & resumable' },
+  { icon: Globe,       label: 'Access Anywhere',          sub: 'Web, mobile, desktop' },
+];
 
 const Login = () => {
   const navigate = useNavigate();
   const { login, googleLogin } = useAuth();
-  
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-  });
-  const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState({});
 
-  const handleChange = (e) => {
+  const [form,           setForm]           = useState({ email: '', password: '' });
+  const [showPwd,        setShowPwd]        = useState(false);
+  const [loading,        setLoading]        = useState(false);
+  const [googleLoading,  setGoogleLoading]  = useState(false);
+  const [errors,         setErrors]         = useState({});
+
+  const onChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    // Clear error when user starts typing
-    if (errors[name]) {
-      setErrors((prev) => ({ ...prev, [name]: '' }));
-    }
+    setForm((p) => ({ ...p, [name]: value }));
+    if (errors[name]) setErrors((p) => ({ ...p, [name]: '' }));
   };
 
   const validate = () => {
-    const newErrors = {};
-    
-    if (!formData.email) {
-      newErrors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Email is invalid';
-    }
-    
-    if (!formData.password) {
-      newErrors.password = 'Password is required';
-    }
-    
-    return newErrors;
+    const e = {};
+    if (!form.email) e.email = 'Email is required';
+    else if (!/\S+@\S+\.\S+/.test(form.email)) e.email = 'Invalid email address';
+    if (!form.password) e.password = 'Password is required';
+    return e;
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    const newErrors = validate();
-    
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      return;
-    }
-
+  const handleSubmit = async (ev) => {
+    ev.preventDefault();
+    const e = validate();
+    if (Object.keys(e).length) { setErrors(e); return; }
     setLoading(true);
-    const result = await login(formData);
+    const ok = await login(form);
     setLoading(false);
-    
-    if (result.success) {
-      navigate('/');
-    }
+    if (ok) { toast.success('Welcome back!'); navigate('/', { replace: true }); }
+  };
+
+  const handleGoogle = async (res) => {
+    setGoogleLoading(true);
+    const { success } = await googleLogin({ token: res.credential });
+    setGoogleLoading(false);
+    if (success) { toast.success('Signed in with Google'); navigate('/', { replace: true }); }
   };
 
   return (
-    <div className="min-h-screen flex bg-gray-50">
-      {/* Left Side - Image/Branding */}
-      <div className="hidden lg:flex lg:w-1/2 bg-primary-600 items-center justify-center p-12">
-        <div className="max-w-md text-pink">
-          <div className="flex items-center gap-3 mb-8">
-            <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-xl flex items-center justify-center">
-              <Cloud className="w-8 h-8 text-white" />
+    <div className="auth-bg" style={{ display: 'flex', minHeight: '100vh' }}>
+      {/* Left panel */}
+      <div className="auth-panel" style={{ display: 'none', width: '48%', margin: 24, borderRadius: 'var(--radius-xl)', flexDirection: 'column', justifyContent: 'space-between' }}
+        ref={(el) => { if (el) el.style.display = window.innerWidth >= 1024 ? 'flex' : 'none'; }}>
+        <div style={{ position: 'relative', zIndex: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 40 }}>
+            <div style={{ width: 40, height: 40, borderRadius: 10, background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Cloud size={22} color="#fff" />
             </div>
-            <span className="text-3xl font-bold tracking-tight">SkyVault</span>
+            <span style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: '1.4rem', color: '#fff' }}>SkyVault</span>
           </div>
-          <h1 className="text-4xl font-bold mb-6">Secure Cloud Storage for Your Digital Life</h1>
-          <p className="text-lg text-primary-100 leading-relaxed">
-            Store, share, and collaborate on your files from anywhere. Simple, secure, and built for you.
+          <h2 style={{ fontFamily: 'Syne, sans-serif', fontSize: '2.25rem', fontWeight: 800, color: '#fff', lineHeight: 1.15, marginBottom: 16 }}>
+            Your files.<br />Your vault.
+          </h2>
+          <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.9375rem', lineHeight: 1.7 }}>
+            Store, share, and access your files from anywhere with enterprise-grade security.
           </p>
-          
-          <div className="mt-12 grid grid-cols-2 gap-6">
-            <div className="bg-white/10 backdrop-blur-sm p-4 rounded-xl border border-white/20">
-              <p className="text-2xl font-bold">15 GB</p>
-              <p className="text-sm text-primary-100">Free storage</p>
+        </div>
+
+        <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {FEATURES.map(({ icon: Icon, label, sub }) => (
+            <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', background: 'rgba(255,255,255,0.08)', borderRadius: 'var(--radius-md)', backdropFilter: 'blur(8px)' }}>
+              <div style={{ width: 36, height: 36, borderRadius: 8, background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Icon size={16} color="#fff" />
+              </div>
+              <div>
+                <p style={{ fontSize: '0.875rem', fontWeight: 600, color: '#fff' }}>{label}</p>
+                <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.55)' }}>{sub}</p>
+              </div>
             </div>
-            <div className="bg-white/10 backdrop-blur-sm p-4 rounded-xl border border-white/20">
-              <p className="text-2xl font-bold">AES-256</p>
-              <p className="text-sm text-primary-100">Encryption</p>
-            </div>
+          ))}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 4 }}>
+            {[['15 GB', 'Free storage'], ['AES-256', 'Encryption']].map(([val, lbl]) => (
+              <div key={lbl} style={{ padding: '14px', background: 'rgba(255,255,255,0.08)', borderRadius: 'var(--radius-md)' }}>
+                <p style={{ fontSize: '1.25rem', fontWeight: 800, color: '#fff', fontFamily: 'Syne, sans-serif' }}>{val}</p>
+                <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.55)' }}>{lbl}</p>
+              </div>
+            ))}
           </div>
         </div>
       </div>
 
-      {/* Right Side - Login Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8">
-        <div className="w-full max-w-md">
-          <div className="lg:hidden flex items-center gap-3 mb-8 justify-center">
-            <Cloud className="w-10 h-10 text-primary-600" />
-            <span className="text-2xl font-bold text-gray-900">CloudDrive</span>
+      {/* Right panel – form */}
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+        <div className="auth-card">
+          {/* Mobile logo */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 28, justifyContent: 'center' }}>
+            <div style={{ width: 34, height: 34, borderRadius: 8, background: 'var(--brand)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Cloud size={18} color="#fff" />
+            </div>
+            <span style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: '1.15rem' }}>SkyVault</span>
           </div>
 
-          <div className="text-center lg:text-left mb-10">
-            <h2 className="text-3xl font-bold text-gray-900">Welcome back</h2>
-            <p className="text-gray-600 mt-2">Log in to your account to continue</p>
+          <div style={{ marginBottom: 24 }}>
+            <h1 style={{ fontSize: '1.5rem', marginBottom: 4 }}>Welcome back</h1>
+            <p style={{ color: 'var(--text-3)', fontSize: '0.875rem' }}>Sign in to your account</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Email Field */}
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {/* Email */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Email address</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Mail className={`w-5 h-5 ${errors.email ? 'text-red-400' : 'text-gray-400'}`} />
-                </div>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  className={`w-full pl-10 pr-4 py-3 bg-white border rounded-lg outline-none transition-all ${
-                    errors.email 
-                      ? 'border-red-300 focus:ring-4 focus:ring-red-50' 
-                      : 'border-gray-200 focus:border-primary-500 focus:ring-4 focus:ring-primary-50'
-                  }`}
-                  placeholder="name@example.com"
-                />
+              <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-2)', display: 'block', marginBottom: 6 }}>Email</label>
+              <div style={{ position: 'relative' }}>
+                <Mail size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-3)', pointerEvents: 'none' }} />
+                <input type="email" name="email" value={form.email} onChange={onChange} className="input" placeholder="you@example.com" style={{ paddingLeft: 32, borderColor: errors.email ? 'var(--danger)' : undefined }} />
               </div>
-              {errors.email && <p className="mt-1 text-sm text-red-600">{errors.email}</p>}
+              {errors.email && <p style={{ fontSize: '0.75rem', color: 'var(--danger)', marginTop: 4 }}>{errors.email}</p>}
             </div>
 
-            {/* Password Field */}
+            {/* Password */}
             <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-sm font-medium text-gray-700">Password</label>
-                <Link to="/forgot-password" title="Coming soon" className="text-sm font-medium text-primary-600 hover:text-primary-700">
-                  Forgot password?
-                </Link>
-              </div>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className={`w-5 h-5 ${errors.password ? 'text-red-400' : 'text-gray-400'}`} />
-                </div>
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  className={`w-full pl-10 pr-12 py-3 bg-white border rounded-lg outline-none transition-all ${
-                    errors.password 
-                      ? 'border-red-300 focus:ring-4 focus:ring-red-50' 
-                      : 'border-gray-200 focus:border-primary-500 focus:ring-4 focus:ring-primary-50'
-                  }`}
-                  placeholder="••••••••"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
-                >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-2)', display: 'block', marginBottom: 6 }}>Password</label>
+              <div style={{ position: 'relative' }}>
+                <Lock size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-3)', pointerEvents: 'none' }} />
+                <input type={showPwd ? 'text' : 'password'} name="password" value={form.password} onChange={onChange} className="input" placeholder="••••••••" style={{ paddingLeft: 32, paddingRight: 36, borderColor: errors.password ? 'var(--danger)' : undefined }} />
+                <button type="button" onClick={() => setShowPwd(!showPwd)} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer' }}>
+                  {showPwd ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
               </div>
-              {errors.password && <p className="mt-1 text-sm text-red-600">{errors.password}</p>}
+              {errors.password && <p style={{ fontSize: '0.75rem', color: 'var(--danger)', marginTop: 4 }}>{errors.password}</p>}
             </div>
 
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-primary-600 text-pink py-3 rounded-lg font-medium hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            >
-              {loading ? (
-                <>
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Signing in...
-                </>
-              ) : (
-                'Sign In'
-              )}
+            <button type="submit" className="btn btn-primary btn-lg" disabled={loading} style={{ marginTop: 4 }}>
+              {loading ? <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> : null}
+              {loading ? 'Signing in…' : 'Sign In'}
             </button>
           </form>
 
-          {/* Social Login */}
-          <div className="mt-8">
-            <div className="relative mb-8">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-200"></div>
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-4 bg-gray-50 text-gray-500">Or continue with</span>
-              </div>
-            </div>
-
-            <button
-              onClick={() => toast.error('Google login is not configured yet')}
-              className="w-full py-3 px-4 bg-white border border-gray-200 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition-colors flex items-center justify-center gap-3"
-            >
-              <svg className="w-5 h-5" viewBox="0 0 24 24">
-                <path
-                  fill="currentColor"
-                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                />
-                <path
-                  fill="currentColor"
-                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                />
-                <path
-                  fill="currentColor"
-                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                />
-                <path
-                  fill="currentColor"
-                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                />
-              </svg>
-              Google
-            </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '18px 0' }}>
+            <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>OR</span>
+            <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
           </div>
 
-          {/* Register Link */}
-          <p className="mt-8 text-center text-sm text-gray-600">
-            Don't have an account?{' '}
-            <Link to="/register" className="font-medium text-primary-600 hover:text-primary-700">
-              Create an account
-            </Link>
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
+            {googleLoading
+              ? <Loader2 size={20} style={{ color: 'var(--brand)', animation: 'spin 1s linear infinite' }} />
+              : <GoogleLogin onSuccess={handleGoogle} onError={() => toast.error('Google login failed')} theme="filled_black" shape="rectangular" />
+            }
+          </div>
+
+          <p style={{ textAlign: 'center', fontSize: '0.8125rem', color: 'var(--text-3)', marginTop: 20 }}>
+            No account?{' '}
+            <Link to="/register" style={{ color: 'var(--brand-light)', fontWeight: 600, textDecoration: 'none' }}>Create one free</Link>
           </p>
         </div>
       </div>

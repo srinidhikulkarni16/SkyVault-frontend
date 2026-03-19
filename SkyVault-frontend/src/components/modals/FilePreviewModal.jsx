@@ -1,21 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { X, Download, Share2, Loader } from 'lucide-react';
-import { fileAPI } from "../../lib/api";
-import { formatFileSize, formatDate, isPreviewable } from "../../lib/utils";
+import { X, Download, Share2, Loader2, FileText, ZoomIn, ZoomOut } from 'lucide-react';
+import { fileAPI } from '../../lib/api';
+import { formatFileSize, formatDate, isPreviewable } from '../../lib/utils';
+import FileIcon from '../common/FileIcon';
 import toast from 'react-hot-toast';
 
 const FilePreviewModal = ({ isOpen, onClose, file, onDownload, onShare }) => {
   const [previewUrl, setPreviewUrl] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [loading,    setLoading]    = useState(false);
+  const [zoom,       setZoom]       = useState(1);
 
   useEffect(() => {
-    if (isOpen && file && isPreviewable(file.mime_type)) {
-      loadPreview();
-    }
+    if (isOpen && file && isPreviewable(file.mime_type)) loadPreview();
+    else setPreviewUrl(null);
+
+    // keyboard close
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
     return () => {
-      if (previewUrl) {
-        URL.revokeObjectURL(previewUrl);
-      }
+      window.removeEventListener('keydown', onKey);
+      setZoom(1);
     };
   }, [isOpen, file]);
 
@@ -24,9 +28,8 @@ const FilePreviewModal = ({ isOpen, onClose, file, onDownload, onShare }) => {
     try {
       const { data } = await fileAPI.downloadFile(file.id);
       setPreviewUrl(data.url);
-    } catch (error) {
+    } catch {
       toast.error('Failed to load preview');
-      console.error(error);
     } finally {
       setLoading(false);
     }
@@ -35,80 +38,89 @@ const FilePreviewModal = ({ isOpen, onClose, file, onDownload, onShare }) => {
   if (!isOpen || !file) return null;
 
   const canPreview = isPreviewable(file.mime_type);
-  const isImage = file.mime_type?.startsWith('image/');
-  const isPdf = file.mime_type === 'application/pdf';
+  const isImage    = file.mime_type?.startsWith('image/');
+  const isPdf      = file.mime_type === 'application/pdf';
+  const isText     = file.mime_type?.startsWith('text/');
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
-      <div className="w-full h-full flex flex-col animate-fade-in">
-        {/* Top Header */}
-        <div className="flex items-center justify-between px-6 py-4 bg-gray-900 text-white border-b border-gray-800">
-          <div className="flex items-center gap-4 min-w-0">
-            <button onClick={onClose} className="p-2 hover:bg-gray-800 rounded-lg transition-colors">
-              <X className="w-6 h-6" />
-            </button>
-            <div className="min-w-0">
-              <h2 className="text-lg font-semibold truncate">{file.name}</h2>
-              <div className="flex items-center gap-2 text-xs text-gray-400">
-                <span>{formatFileSize(file.size_bytes)}</span>
-                <span>•</span>
-                <span>Modified {formatDate(file.updated_at)}</span>
+    <div
+      style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(5,6,10,0.92)', backdropFilter: 'blur(16px)', display: 'flex', flexDirection: 'column', animation: 'modal-in 0.2s ease forwards' }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      {/* Top bar */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', background: 'var(--surface-1)', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
+        <button className="btn btn-icon btn-ghost" onClick={onClose} title="Close (Esc)"><X size={18} /></button>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
+          <FileIcon mimeType={file.mime_type} name={file.name} size={20} />
+          <div style={{ minWidth: 0 }}>
+            <h2 className="truncate" style={{ fontSize: '0.9375rem', fontWeight: 600, color: 'var(--text-1)' }}>{file.name}</h2>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>
+              {formatFileSize(file.size_bytes)} · Modified {formatDate(file.updated_at || file.created_at)}
+            </p>
+          </div>
+        </div>
+
+        {/* Zoom controls for images */}
+        {isImage && previewUrl && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <button className="btn btn-icon btn-ghost" onClick={() => setZoom((z) => Math.max(0.25, z - 0.25))}><ZoomOut size={16} /></button>
+            <span style={{ fontSize: '0.8125rem', color: 'var(--text-3)', minWidth: 40, textAlign: 'center' }}>{Math.round(zoom * 100)}%</span>
+            <button className="btn btn-icon btn-ghost" onClick={() => setZoom((z) => Math.min(4, z + 0.25))}><ZoomIn size={16} /></button>
+          </div>
+        )}
+
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button className="btn btn-secondary btn-sm" onClick={() => onShare(file)}>
+            <Share2 size={13} /> Share
+          </button>
+          <button className="btn btn-primary btn-sm" onClick={() => onDownload(file)}>
+            <Download size={13} /> Download
+          </button>
+        </div>
+      </div>
+
+      {/* Preview area */}
+      <div style={{ flex: 1, overflow: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+        {loading ? (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+            <Loader2 size={32} style={{ color: 'var(--brand)', animation: 'spin 1s linear infinite' }} />
+            <p style={{ fontSize: '0.875rem', color: 'var(--text-3)' }}>Loading preview…</p>
+          </div>
+        ) : canPreview && previewUrl ? (
+          <>
+            {isImage && (
+              <img
+                src={previewUrl}
+                alt={file.name}
+                style={{ maxWidth: '100%', maxHeight: '80vh', objectFit: 'contain', borderRadius: 'var(--radius-md)', boxShadow: 'var(--shadow-lg)', transform: `scale(${zoom})`, transformOrigin: 'center', transition: 'transform 0.2s ease' }}
+              />
+            )}
+            {isPdf && (
+              <iframe
+                src={previewUrl}
+                title={file.name}
+                style={{ width: '100%', maxWidth: 900, height: '80vh', border: 'none', borderRadius: 'var(--radius-md)', background: '#fff' }}
+              />
+            )}
+            {isText && (
+              <div style={{ width: '100%', maxWidth: 800, background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: 24, maxHeight: '75vh', overflow: 'auto' }}>
+                <iframe src={previewUrl} title={file.name} style={{ width: '100%', height: '60vh', border: 'none', background: 'transparent', color: 'var(--text-1)' }} />
               </div>
+            )}
+          </>
+        ) : (
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'var(--surface-3)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+              <FileIcon mimeType={file.mime_type} name={file.name} size={36} />
             </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => onShare(file)}
-              className="p-2 hover:bg-gray-800 rounded-lg transition-colors flex items-center gap-2"
-            >
-              <Share2 className="w-5 h-5" />
-              <span className="hidden sm:inline">Share</span>
-            </button>
-            <button
-              onClick={() => onDownload(file)}
-              className="p-2 bg-primary-600 hover:bg-primary-700 rounded-lg transition-colors flex items-center gap-2"
-            >
-              <Download className="w-5 h-5" />
-              <span className="hidden sm:inline">Download</span>
+            <p style={{ fontSize: '0.9375rem', fontWeight: 600, color: 'var(--text-2)', marginBottom: 6 }}>Preview not available</p>
+            <p style={{ fontSize: '0.8125rem', color: 'var(--text-3)', marginBottom: 20 }}>This file type can't be previewed in the browser.</p>
+            <button className="btn btn-primary" onClick={() => onDownload(file)}>
+              <Download size={14} /> Download to view
             </button>
           </div>
-        </div>
-
-        {/* Preview Content */}
-        <div className="flex-1 overflow-hidden bg-gray-100 flex items-center justify-center">
-          {loading ? (
-            <div className="flex flex-col items-center gap-3">
-              <Loader className="w-8 h-8 text-primary-600 animate-spin" />
-              <p className="text-sm text-gray-600">Loading preview...</p>
-            </div>
-          ) : canPreview && previewUrl ? (
-            <div className="w-full h-full p-6 overflow-auto custom-scrollbar">
-              {isImage && (
-                <img
-                  src={previewUrl}
-                  alt={file.name}
-                  className="max-w-full h-auto mx-auto rounded-lg shadow-lg"
-                />
-              )}
-              {isPdf && (
-                <iframe
-                  src={previewUrl}
-                  className="w-full h-full border-0 rounded-lg shadow-lg"
-                  title={file.name}
-                />
-              )}
-            </div>
-          ) : (
-            <div className="text-center p-8">
-              <p className="text-gray-600 mb-4">Preview not available for this file type</p>
-              <button onClick={() => onDownload(file)} className="btn btn-primary">
-                <Download className="w-4 h-4 mr-2 inline" />
-                Download to view
-              </button>
-            </div>
-          )}
-        </div>
+        )}
       </div>
     </div>
   );

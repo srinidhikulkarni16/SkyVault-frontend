@@ -9,10 +9,10 @@ const DeleteModal = ({ isOpen, onClose, item, onDelete }) => {
     setLoading(true);
     try {
       await onDelete(item);
-      toast.success(`${item.type === 'folder' ? 'Folder' : 'File'} moved to trash`);
+      toast.success(`Moved to trash`);
       onClose();
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to delete');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to delete');
     } finally {
       setLoading(false);
     }
@@ -22,53 +22,33 @@ const DeleteModal = ({ isOpen, onClose, item, onDelete }) => {
 
   return (
     <div className="modal-overlay">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md animate-slide-in">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
-              <AlertTriangle className="w-5 h-5 text-red-600" />
+      <div className="modal-card">
+        <div className="modal-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 34, height: 34, borderRadius: 8, background: 'rgba(255,85,85,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <AlertTriangle size={16} style={{ color: 'var(--danger)' }} />
             </div>
-            <h2 className="text-xl font-semibold text-gray-900">Delete {item.type === 'folder' ? 'Folder' : 'File'}?</h2>
+            <h2 style={{ fontSize: '1rem', fontWeight: 700 }}>Delete {item.type === 'folder' ? 'Folder' : 'File'}?</h2>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <button className="btn btn-icon btn-ghost" onClick={onClose}><X size={16} /></button>
         </div>
 
-        {/* Content */}
-        <div className="p-6">
-          <p className="text-gray-700 mb-4">
-            Are you sure you want to delete <span className="font-semibold">"{item.name}"</span>?
+        <div className="modal-body">
+          <p style={{ fontSize: '0.875rem', color: 'var(--text-2)', lineHeight: 1.6 }}>
+            Are you sure you want to delete <span style={{ fontWeight: 600, color: 'var(--text-1)' }}>"{item.name}"</span>?
           </p>
           {item.type === 'folder' && (
-            <p className="text-sm text-amber-700 bg-amber-50 p-3 rounded-lg">
-              This will also delete all files and folders inside.
-            </p>
+            <div style={{ marginTop: 12, padding: '10px 12px', background: 'rgba(245,166,35,0.08)', border: '1px solid rgba(245,166,35,0.2)', borderRadius: 'var(--radius-sm)' }}>
+              <p style={{ fontSize: '0.8125rem', color: '#F5A623' }}>All files and sub-folders inside will also be deleted.</p>
+            </div>
           )}
-          <p className="text-sm text-gray-500 mt-4">
-            Items can be restored from trash within 30 days.
-          </p>
+          <p style={{ fontSize: '0.8125rem', color: 'var(--text-3)', marginTop: 10 }}>Items can be restored from Trash within 30 days.</p>
         </div>
 
-        {/* Footer */}
-        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200">
-          <button
-            onClick={onClose}
-            className="btn btn-secondary"
-            disabled={loading}
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleDelete}
-            className="btn bg-red-600 hover:bg-red-700 text-white"
-            disabled={loading}
-          >
-            {loading ? 'Deleting...' : 'Move to Trash'}
+        <div className="modal-footer">
+          <button className="btn btn-secondary" onClick={onClose} disabled={loading}>Cancel</button>
+          <button className="btn btn-danger" onClick={handleDelete} disabled={loading}>
+            {loading ? 'Deleting…' : 'Move to Trash'}
           </button>
         </div>
       </div>

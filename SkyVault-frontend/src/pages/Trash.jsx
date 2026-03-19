@@ -1,45 +1,37 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { trashAPI, fileAPI } from '../lib/api'; // Corrected (one level up to src)
-import { useFileStore } from "../store/fileStore"; // Corrected
-import { formatFileSize, formatDate } from "../lib/utils"; // Corrected
+import { trashAPI } from '../lib/api';
+import { formatFileSize, formatDate } from '../lib/utils';
+import { RotateCcw, Trash2, AlertTriangle, X, Folder } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { RotateCcw, Trash2, AlertTriangle, X } from 'lucide-react';
+import Sidebar    from '../components/layout/Sidebar';
+import Header     from '../components/layout/Header';
+import EmptyState from '../components/common/EmptyState';
+import PageTitle  from '../components/common/PageTitle';
+import FileIcon   from '../components/common/FileIcon';
 
-// Layout components - Change from ../../ to ../
-import Sidebar from "../components/layout/Sidebar";
-import Header from "../components/layout/Header";
-import EmptyState from "../components/common/EmptyState";
-
-const ConfirmDeleteModal = ({ isOpen, onClose, item, onConfirm }) => {
+const ConfirmModal = ({ isOpen, onClose, onConfirm, item }) => {
   if (!isOpen || !item) return null;
-
   return (
     <div className="modal-overlay">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md animate-slide-in">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
-              <AlertTriangle className="w-5 h-5 text-red-600" />
+      <div className="modal-card">
+        <div className="modal-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 34, height: 34, borderRadius: 8, background: 'rgba(255,85,85,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <AlertTriangle size={16} style={{ color: 'var(--danger)' }} />
             </div>
-            <h2 className="text-xl font-semibold text-gray-900">Permanent Delete?</h2>
+            <h2 style={{ fontSize: '1rem', fontWeight: 700 }}>Delete permanently?</h2>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <button className="btn btn-icon btn-ghost" onClick={onClose}><X size={16} /></button>
         </div>
-        <div className="p-6">
-          <p className="text-gray-700">
-            Are you sure you want to permanently delete <span className="font-semibold">"{item.name}"</span>? 
-            This action cannot be undone.
+        <div className="modal-body">
+          <p style={{ fontSize: '0.875rem', color: 'var(--text-2)', lineHeight: 1.6 }}>
+            <span style={{ fontWeight: 600, color: 'var(--text-1)' }}>"{item.name}"</span> will be permanently deleted. This cannot be undone.
           </p>
         </div>
-        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200">
-          <button onClick={onClose} className="btn btn-secondary">Cancel</button>
-          <button onClick={onConfirm} className="btn bg-red-600 hover:bg-red-700 text-white">Delete Forever</button>
+        <div className="modal-footer">
+          <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
+          <button className="btn btn-danger" onClick={onConfirm}>Delete Forever</button>
         </div>
       </div>
     </div>
@@ -47,127 +39,110 @@ const ConfirmDeleteModal = ({ isOpen, onClose, item, onConfirm }) => {
 };
 
 const Trash = () => {
-  const queryClient = useQueryClient();
-  const [confirmModal, setConfirmModal] = useState({ open: false, item: null });
+  const qc = useQueryClient();
+  const [confirm, setConfirm] = useState({ open: false, item: null });
 
-  const { data: trashItems, isLoading } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ['trash'],
-    queryFn: () => trashAPI.getTrash().then((res) => res.data),
+    queryFn:  () => trashAPI.getTrash().then((r) => r.data),
   });
 
-  const restoreMutation = useMutation({
+  const restore = useMutation({
     mutationFn: (item) => trashAPI.restore(item.type, item.id),
-    onSuccess: () => {
-      queryClient.invalidateQueries(['trash']);
-      toast.success('Item restored');
-    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['trash'] }); toast.success('Restored'); },
   });
 
-  const deleteMutation = useMutation({
+  const perm = useMutation({
     mutationFn: (item) => trashAPI.permanentDelete(item.type, item.id),
-    onSuccess: () => {
-      queryClient.invalidateQueries(['trash']);
-      toast.success('Item permanently deleted');
-    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['trash'] }); toast.success('Permanently deleted'); },
   });
 
-  const handleRestore = (item) => {
-    restoreMutation.mutate(item);
-  };
+  const emptyTrash = useMutation({
+    mutationFn: () => trashAPI.emptyTrash(),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['trash'] }); toast.success('Trash emptied'); },
+  });
 
-  const handlePermanentDelete = (item) => {
-    setConfirmModal({ open: true, item });
-  };
+  const items = Array.isArray(data) ? data : [];
 
-  const confirmDelete = () => {
-    if (confirmModal.item) {
-      deleteMutation.mutate(confirmModal.item);
-      setConfirmModal({ open: false, item: null });
-    }
-  };
-
-  const items = trashItems || [];
+  const EmptyBtn = items.length > 0 ? (
+    <button
+      className="btn btn-danger btn-sm"
+      onClick={() => emptyTrash.mutate()}
+      disabled={emptyTrash.isPending}
+    >
+      <Trash2 size={13} /> Empty Trash
+    </button>
+  ) : null;
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="page-layout">
       <Sidebar />
+      <div className="page-main">
+        <Header onUploadClick={null} onNewFolderClick={null} />
+        <PageTitle title="Trash" sub="Items are permanently deleted after 30 days" action={EmptyBtn} />
 
-      <div className="flex-1 flex flex-col ml-64">
-        <Header onUploadClick={() => {}} onNewFolderClick={() => {}} />
-
-        <div className="px-6 py-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Trash</h1>
-            <p className="text-sm text-gray-500 mt-1">Items here will be deleted after 30 days</p>
-          </div>
-          {items.length > 0 && (
-            <button
-              onClick={() => toast.error('Empty trash not implemented')}
-              className="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors font-medium"
-            >
-              <Trash2 className="w-5 h-5" />
-              Empty Trash
-            </button>
-          )}
-        </div>
-
-        <main className="flex-1 overflow-y-auto p-6">
+        <main className="page-content">
           {isLoading ? (
-            <div className="flex items-center justify-center h-64">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 200 }}>
+              <div style={{ width: 32, height: 32, border: '2px solid var(--brand)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
             </div>
           ) : items.length === 0 ? (
             <EmptyState type="trash" />
           ) : (
-            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
-              <div className="divide-y divide-gray-200">
-                {items.map((item) => (
-                  <div key={`${item.type}-${item.id}`} className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors">
-                    <div className="flex items-center gap-4 min-w-0">
-                      <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <Trash2 className="w-5 h-5 text-gray-400" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">{item.name}</p>
-                        <div className="flex items-center gap-2 text-xs text-gray-500">
-                          <span>{item.type === 'file' ? formatFileSize(item.size_bytes) : 'Folder'}</span>
-                          <span>•</span>
-                          <span>Deleted on {formatDate(item.deleted_at)}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => handleRestore(item)}
-                        disabled={restoreMutation.isLoading}
-                        className="flex items-center gap-2 px-3 py-1.5 text-sm text-green-700 bg-green-50 hover:bg-green-100 rounded-lg transition-colors disabled:opacity-50"
-                      >
-                        <RotateCcw className="w-4 h-4" />
-                        Restore
-                      </button>
-                      <button
-                        onClick={() => handlePermanentDelete(item)}
-                        disabled={deleteMutation.isLoading}
-                        className="flex items-center gap-2 px-3 py-1.5 text-sm text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition-colors disabled:opacity-50"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                        Delete Forever
-                      </button>
-                    </div>
+            <div className="card" style={{ overflow: 'hidden' }}>
+              {items.map((item) => (
+                <div
+                  key={`${item.type}-${item.id}`}
+                  style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 16px', borderBottom: '1px solid var(--border)', transition: 'background var(--transition)' }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'var(--surface-3)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                >
+                  {/* Icon */}
+                  <div style={{ width: 36, height: 36, borderRadius: 8, background: 'var(--surface-3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    {item.type === 'folder'
+                      ? <Folder size={18} style={{ color: 'var(--brand)' }} />
+                      : <FileIcon mimeType={item.mime_type} name={item.name} size={18} />
+                    }
                   </div>
-                ))}
-              </div>
+
+                  {/* Info */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p className="truncate" style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-1)' }}>{item.name}</p>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>
+                      {item.type === 'file' ? formatFileSize(item.size_bytes) : 'Folder'} · Deleted {formatDate(item.deleted_at || item.updated_at)}
+                    </p>
+                  </div>
+
+                  {/* Actions */}
+                  <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                    <button
+                      className="btn btn-sm"
+                      style={{ background: 'rgba(46,204,113,0.1)', color: '#2ECC71', border: '1px solid rgba(46,204,113,0.2)', gap: 6 }}
+                      onClick={() => restore.mutate(item)}
+                      disabled={restore.isPending}
+                    >
+                      <RotateCcw size={12} /> Restore
+                    </button>
+                    <button
+                      className="btn btn-sm btn-danger"
+                      onClick={() => setConfirm({ open: true, item })}
+                      disabled={perm.isPending}
+                    >
+                      <Trash2 size={12} /> Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </main>
       </div>
 
-      <ConfirmDeleteModal
-        isOpen={confirmModal.open}
-        onClose={() => setConfirmModal({ open: false, item: null })}
-        item={confirmModal.item}
-        onConfirm={confirmDelete}
+      <ConfirmModal
+        isOpen={confirm.open}
+        onClose={() => setConfirm({ open: false, item: null })}
+        item={confirm.item}
+        onConfirm={() => { perm.mutate(confirm.item); setConfirm({ open: false, item: null }); }}
       />
     </div>
   );

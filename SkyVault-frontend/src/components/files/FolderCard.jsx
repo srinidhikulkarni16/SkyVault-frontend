@@ -1,123 +1,78 @@
-import React, { useState } from 'react';
-import {
-  MoreVertical,
-  Trash2,
-  Edit,
-  Share2,
-  Star,
-  Folder,
-  FolderOpen,
-  Move,
-} from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { MoreVertical, Trash2, Edit, Share2, Star, FolderOpen, Folder, Move } from 'lucide-react';
 import { formatDate } from '../../lib/utils';
 import { useFileStore } from '../../store/fileStore';
 
 const FolderCard = ({ folder, onOpen, onRename, onMove, onDelete, onShare, onStar }) => {
-  const [showMenu, setShowMenu] = useState(false);
+  const [menuOpen,  setMenuOpen]  = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const menuRef = useRef(null);
   const { selectedItems, toggleItemSelection } = useFileStore();
-  
-  const isSelected = selectedItems.some((item) => item.id === folder.id && item.type === 'folder');
+  const isSelected = selectedItems.some((i) => i.id === folder.id && i.type === 'folder');
 
-  const handleMenuClick = (e, action) => {
-    e.stopPropagation();
-    setShowMenu(false);
-    action();
-  };
+  useEffect(() => {
+    const handler = (e) => { if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false); };
+    if (menuOpen) document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [menuOpen]);
+
+  const action = (fn) => (e) => { e.stopPropagation(); setMenuOpen(false); fn(); };
 
   return (
     <div
-      className={`relative group bg-white border-2 rounded-lg p-4 hover:shadow-lg transition-all cursor-pointer ${
-        isSelected ? 'border-primary-500 bg-primary-50' : 'border-gray-200 hover:border-gray-300'
-      }`}
+      className={`file-card ${isSelected ? 'selected' : ''}`}
       onClick={() => onOpen(folder)}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <div className="flex items-start justify-between mb-3">
-        <div 
-          className="p-2 bg-blue-50 rounded-lg group-hover:bg-white transition-colors"
-          onClick={(e) => {
-            e.stopPropagation();
-            toggleItemSelection({ id: folder.id, type: 'folder' });
-          }}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
+        <div
+          onClick={(e) => { e.stopPropagation(); toggleItemSelection({ id: folder.id, type: 'folder' }); }}
+          style={{ padding: 10, background: 'rgba(79,110,247,0.1)', borderRadius: 10, cursor: 'pointer', transition: 'background var(--transition)' }}
+          onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(79,110,247,0.18)'}
+          onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(79,110,247,0.1)'}
         >
-          {isHovered ? (
-            <FolderOpen className="w-8 h-8 text-blue-600" />
-          ) : (
-            <Folder className="w-8 h-8 text-blue-600" />
-          )}
+          {isHovered
+            ? <FolderOpen size={24} style={{ color: 'var(--brand-light)' }} strokeWidth={1.75} />
+            : <Folder     size={24} style={{ color: 'var(--brand)' }}       strokeWidth={1.75} />
+          }
         </div>
 
-        <div className="relative">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowMenu(!showMenu);
-            }}
-            className="p-1 hover:bg-gray-100 rounded-full transition-colors"
-          >
-            <MoreVertical className="w-5 h-5 text-gray-400" />
-          </button>
+        {folder.is_starred && (
+          <Star size={12} style={{ color: '#F5A623', fill: '#F5A623', marginRight: 'auto', marginLeft: 6, marginTop: 2 }} />
+        )}
 
-          {showMenu && (
-            <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-20">
-              <button
-                onClick={(e) => handleMenuClick(e, () => onOpen(folder))}
-                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-3"
-              >
-                <FolderOpen className="w-4 h-4" />
-                Open
-              </button>
-              <button
-                onClick={(e) => handleMenuClick(e, onRename)}
-                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-3"
-              >
-                <Edit className="w-4 h-4" />
-                Rename
-              </button>
-              <button
-                onClick={(e) => handleMenuClick(e, onMove)}
-                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-3"
-              >
-                <Move className="w-4 h-4" />
-                Move
-              </button>
-              <button
-                onClick={(e) => handleMenuClick(e, onShare)}
-                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-3"
-              >
-                <Share2 className="w-4 h-4" />
-                Share
-              </button>
-              <button
-                onClick={(e) => handleMenuClick(e, onStar)}
-                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-3"
-              >
-                <Star className={`w-4 h-4 ${folder.is_starred ? 'fill-yellow-400 text-yellow-400' : ''}`} />
+        <div ref={menuRef} style={{ position: 'relative' }}>
+          <button
+            onClick={(e) => { e.stopPropagation(); setMenuOpen(!menuOpen); }}
+            className="btn btn-icon btn-ghost"
+            style={{ padding: 4 }}
+          >
+            <MoreVertical size={15} />
+          </button>
+          {menuOpen && (
+            <div className="context-menu">
+              <button className="context-item" onClick={action(() => onOpen(folder))}><FolderOpen size={13} />Open</button>
+              <button className="context-item" onClick={action(onRename)}><Edit size={13} />Rename</button>
+              <button className="context-item" onClick={action(onMove)}><Move size={13} />Move</button>
+              <button className="context-item" onClick={action(onShare)}><Share2 size={13} />Share</button>
+              <button className="context-item" onClick={action(onStar)}>
+                <Star size={13} style={folder.is_starred ? { color: '#F5A623', fill: '#F5A623' } : {}} />
                 {folder.is_starred ? 'Unstar' : 'Star'}
               </button>
-              <div className="border-t border-gray-200 my-1"></div>
-              <button
-                onClick={(e) => handleMenuClick(e, onDelete)}
-                className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-3"
-              >
-                <Trash2 className="w-4 h-4" />
-                Delete
-              </button>
+              <div className="context-divider" />
+              <button className="context-item danger" onClick={action(onDelete)}><Trash2 size={13} />Delete</button>
             </div>
           )}
         </div>
       </div>
 
-      <div className="space-y-1">
-        <h3 className="font-medium text-gray-900 truncate" title={folder.name}>
-          {folder.name}
-        </h3>
-        <p className="text-xs text-gray-500">
-          Modified {formatDate(folder.updated_at)}
-        </p>
-      </div>
+      <h3 className="truncate" style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-1)', marginBottom: 4 }} title={folder.name}>
+        {folder.name}
+      </h3>
+      <p style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>
+        Modified {formatDate(folder.updated_at || folder.created_at)}
+      </p>
     </div>
   );
 };

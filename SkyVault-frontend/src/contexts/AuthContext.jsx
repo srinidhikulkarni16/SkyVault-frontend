@@ -1,95 +1,85 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { authAPI } from '../lib/api';
 import toast from 'react-hot-toast';
-import * as jwtDecodeModule from 'jwt-decode'; // Vite-compatible import
-
-const jwtDecode = jwtDecodeModule.default || jwtDecodeModule;
 
 const AuthContext = createContext(null);
 
 export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within AuthProvider');
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
+  return ctx;
+};
+
+const isTokenValid = (token) => {
+  if (!token) return false;
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return payload.exp * 1000 > Date.now();
+  } catch {
+    return false;
   }
-  return context;
 };
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+  const [user,    setUser]    = useState(null);
+  const [token,   setToken]   = useState(null);
   const [loading, setLoading] = useState(true);
-  const [token, setToken] = useState(localStorage.getItem('token'));
 
   useEffect(() => {
-    const initAuth = async () => {
-      const storedToken = localStorage.getItem('token');
-      if (storedToken) {
-        try {
-          const decoded = jwtDecode(storedToken);
-          if (decoded.exp * 1000 < Date.now()) throw new Error('Token expired');
-
-          const { data } = await authAPI.getProfile();
-          setUser(data);
-          setToken(storedToken);
-        } catch (error) {
-          console.error('Auth initialization failed:', error);
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-          setToken(null);
-          setUser(null);
-        }
+    const storedToken = localStorage.getItem('token');
+    const storedUser  = localStorage.getItem('user');
+    if (storedToken && isTokenValid(storedToken) && storedUser) {
+      try {
+        setToken(storedToken);
+        setUser(JSON.parse(storedUser));
+      } catch {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
       }
-      setLoading(false);
-    };
-
-    initAuth();
+    } else {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+    }
+    setLoading(false);
   }, []);
 
-  const login = async (credentials) => {
+  const persist = (token, user) => {
+    localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(user));
+    setToken(token);
+    setUser(user);
+  };
+
+  const login = async (formData) => {
     try {
-      const { data } = await authAPI.login(credentials);
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
-      setToken(data.token);
-      setUser(data.user);
-      toast.success('Login successful!');
-      return { success: true };
-    } catch (error) {
-      const message = error.response?.data?.message || 'Login failed';
-      toast.error(message);
-      return { success: false, error: message };
+      const { data } = await authAPI.login(formData);
+      persist(data.token, data.user);
+      return true;
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Invalid credentials');
+      return false;
     }
   };
 
-  const register = async (userData) => {
+  const register = async (formData) => {
     try {
-      const { data } = await authAPI.register(userData);
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
-      setToken(data.token);
-      setUser(data.user);
-      toast.success('Registration successful!');
+      const { data } = await authAPI.register(formData);
+      persist(data.token, data.user);
       return { success: true };
-    } catch (error) {
-      const message = error.response?.data?.message || 'Registration failed';
-      toast.error(message);
-      return { success: false, error: message };
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Registration failed');
+      return { success: false };
     }
   };
 
-  const googleLogin = async (googleToken) => {
+  const googleLogin = async ({ token: googleToken }) => {
     try {
-      const { data } = await authAPI.googleLogin(googleToken);
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
-      setToken(data.token);
-      setUser(data.user);
-      toast.success('Google login successful!');
+      const { data } = await authAPI.googleLogin({ token: googleToken });
+      persist(data.token, data.user);
       return { success: true };
-    } catch (error) {
-      const message = error.response?.data?.message || 'Google login failed';
-      toast.error(message);
-      return { success: false, error: message };
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Google login failed');
+      return { success: false };
     }
   };
 
@@ -98,22 +88,11 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('user');
     setToken(null);
     setUser(null);
-    toast.success('Logged out successfully');
+    toast.success('Signed out');
   };
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        token,
-        loading,
-        login,
-        register,
-        googleLogin,
-        logout,
-        isAuthenticated: !!token,
-      }}
-    >
+    <AuthContext.Provider value={{ user, token, loading, login, register, googleLogin, logout, isAuthenticated: !!token && isTokenValid(token) }}>
       {children}
     </AuthContext.Provider>
   );

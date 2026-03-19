@@ -1,94 +1,59 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, FolderPlus } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const NewFolderModal = ({ isOpen, onClose, parentFolderId, onCreateFolder }) => {
-  const [name, setName] = useState('');
+  const [name,    setName]    = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => { if (isOpen) setName(''); }, [isOpen]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    if (!name.trim()) {
-      toast.error('Folder name cannot be empty');
-      return;
-    }
-
+    if (!name.trim()) { toast.error('Folder name cannot be empty'); return; }
     setLoading(true);
     try {
-      await onCreateFolder({ name: name.trim(), parent_id: parentFolderId });
-      toast.success('Folder created successfully');
-      setName('');
+      await onCreateFolder({ name: name.trim(), parent_id: parentFolderId || null });
+      toast.success('Folder created');
       onClose();
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to create folder');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to create folder');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleClose = () => {
-    setName('');
-    onClose();
-  };
-
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={handleClose}>
-      <div
-        className="bg-white rounded-xl shadow-2xl w-full max-w-md animate-slide-in"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-              <FolderPlus className="w-5 h-5 text-blue-600" />
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 34, height: 34, borderRadius: 8, background: 'rgba(79,110,247,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <FolderPlus size={16} style={{ color: 'var(--brand-light)' }} />
             </div>
-            <h2 className="text-xl font-semibold text-gray-900">New Folder</h2>
+            <h2 style={{ fontSize: '1rem', fontWeight: 700 }}>New Folder</h2>
           </div>
-          <button
-            onClick={handleClose}
-            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <button className="btn btn-icon btn-ghost" onClick={onClose}><X size={16} /></button>
         </div>
 
-        {/* Content */}
         <form onSubmit={handleSubmit}>
-          <div className="p-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Folder name</label>
+          <div className="modal-body">
+            <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-2)', display: 'block', marginBottom: 8 }}>Folder name</label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="input"
               placeholder="Untitled folder"
               autoFocus
             />
-            <p className="text-xs text-gray-500 mt-2">
-              Create a new folder in the current location
-            </p>
           </div>
-
-          {/* Footer */}
-          <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200">
-            <button
-              type="button"
-              onClick={handleClose}
-              className="btn btn-secondary"
-              disabled={loading}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="btn btn-primary"
-              disabled={loading || !name.trim()}
-            >
-              {loading ? 'Creating...' : 'Create'}
+          <div className="modal-footer">
+            <button type="button" className="btn btn-secondary" onClick={onClose} disabled={loading}>Cancel</button>
+            <button type="submit" className="btn btn-primary" disabled={loading || !name.trim()}>
+              {loading ? 'Creating…' : 'Create'}
             </button>
           </div>
         </form>

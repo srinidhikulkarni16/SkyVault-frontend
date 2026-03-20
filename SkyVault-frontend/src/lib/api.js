@@ -26,57 +26,63 @@ api.interceptors.response.use(
 export default api
 
 export const authAPI = {
-  login:       (data)  => api.post('/auth/login', data),
-  register:    (data)  => api.post('/auth/register', data),
-  googleLogin: (data)  => api.post('/auth/google', data),
+  login:       (data) => api.post('/auth/login', data),
+  register:    (data) => api.post('/auth/register', data),
+  googleLogin: (data) => api.post('/auth/google', data),
+  getProfile:  ()     => api.get('/auth/me'),
 }
 
 export const fileAPI = {
-  // Use null if folderId is falsy to prevent UUID errors
-  getFiles:     (folderId) => api.get('/files', { params: { folder_id: folderId || null } }),
-  getRecentFiles: ()       => api.get('/files/recent'),
-  uploadFile:   (formData, onUploadProgress) =>
+  getFiles:       (folderId) => api.get('/files', { params: { folder_id: folderId || null } }),
+  getRecentFiles: ()         => api.get('/files/recent'),
+  uploadFile:     (formData, onUploadProgress) =>
     api.post('/files/upload', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
       onUploadProgress,
     }),
   downloadFile: (id)       => api.get(`/files/${id}/download`),
-  rename:       (id, name) => api.patch(`/files/${id}`, { name }),
-  move:         (id, folderId) => api.patch(`/files/${id}/move`, { folder_id: folderId || null }),
-  delete:       (id)       => api.delete(`/files/${id}`),
+  renameFile:   (id, data) => api.patch(`/files/${id}/rename`, data),
+  moveFile:     (id, data) => api.patch(`/files/${id}/move`, data),
+  deleteFile:   (id)       => api.delete(`/files/${id}`),
 }
 
 export const folderAPI = {
-  // Use null instead of empty string for root
-  getFolders: (parentId) => api.get('/folders', { params: { parent_id: parentId || null } }),
-  create:     (data)     => api.post('/folders', { 
-    ...data, 
-    parent_id: data.parent_id || null 
-  }),
-  rename:     (id, name) => api.patch(`/folders/${id}`, { name }),
-  move:       (id, parentId) => api.patch(`/folders/${id}/move`, { parent_id: parentId || null }),
-  delete:     (id)       => api.delete(`/folders/${id}`),
+  getFolders:   (parentId) => api.get('/folders', { params: { parent_id: parentId || null } }),
+  createFolder: (data)     => api.post('/folders', { ...data, parent_id: data.parent_id || null }),
+  renameFolder: (id, data) => api.patch(`/folders/${id}/rename`, data),
+  moveFolder:   (id, data) => api.patch(`/folders/${id}/move`, data),
+  deleteFolder: (id)       => api.delete(`/folders/${id}`),
 }
 
 export const starAPI = {
-  getStarred: ()               => api.get('/stars'),
-  star:       (type, id)       => api.post('/stars', { resource_type: type, resource_id: id }),
-  unstar:     (type, id)       => api.delete(`/stars/${type}/${id}`),
+  getStarred: ()         => api.get('/stars'),
+  // ✅ snake_case matches starValidation and starController
+  star:   (type, id) => api.post('/stars', { resource_type: type, resource_id: id }),
+  unstar: (type, id) => api.delete(`/stars/${type}/${id}`),
 }
 
 export const trashAPI = {
-  getTrash:        ()          => api.get('/trash'),
-  restore:         (type, id)  => api.post(`/trash/${type}/${id}/restore`),
-  permanentDelete: (type, id)  => api.delete(`/trash/${type}/${id}`),
-  emptyTrash:      ()          => api.delete('/trash'),
+  getTrash: () => api.get('/trash'),
+  // ✅ POST /trash/restore with body — matches trashController.restoreItem
+  restore: (type, id) => api.post('/trash/restore', {
+    resource_type: type,
+    resource_id:   id,
+    type,
+    id,
+  }),
+  permanentDelete: (type, id) => api.delete(`/trash/${type}/${id}`),
+  // ✅ /trash/empty route added in trashRoutes.js
+  emptyTrash: () => api.delete('/trash/empty'),
 }
 
 export const shareAPI = {
-  getShares:       (type, id) => api.get(`/shares/${type}/${id}`),
-  shareWithUser:   (data)     => api.post('/shares/user', data),
-  createPublicLink:(data)     => api.post('/shares/link', data),
-  deleteShare:     (id)       => api.delete(`/shares/user/${id}`),
-  deletePublicLink:(id)       => api.delete(`/shares/link/${id}`),
-  accessPublicLink:(token, pwd) =>
+  getShares:        (type, id) => api.get(`/shares/${type}/${id}`),
+  // ✅ POST /shares (not /shares/user) + snake_case matches shareValidation
+  shareWithUser:    (data)     => api.post('/shares', data),
+  createPublicLink: (data)     => api.post('/shares/link', data),
+  // ✅ DELETE /shares/:id (not /shares/user/:id)
+  deleteShare:      (id)       => api.delete(`/shares/${id}`),
+  deletePublicLink: (id)       => api.delete(`/shares/link/${id}`),
+  accessPublicLink: (token, pwd) =>
     api.post(`/shares/public/${token}`, pwd ? { password: pwd } : {}),
 }

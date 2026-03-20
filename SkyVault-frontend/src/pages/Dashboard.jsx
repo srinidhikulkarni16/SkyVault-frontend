@@ -6,7 +6,6 @@ import { useFileStore } from '../store/fileStore';
 import { generateBreadcrumbs } from '../lib/utils';
 import toast from 'react-hot-toast';
 
-// Layout & UI Components
 import Sidebar from '../components/layout/Sidebar';
 import Header from '../components/layout/Header';
 import Breadcrumb from '../components/layout/Breadcrumb';
@@ -16,7 +15,6 @@ import FileList from '../components/files/FileList';
 import EmptyState from '../components/common/EmptyState';
 import Skeletons from '../components/common/Skeletons';
 
-// Modals
 import UploadModal from '../components/modals/UploadModal';
 import NewFolderModal from '../components/modals/NewFolderModal';
 import RenameModal from '../components/modals/RenameModal';
@@ -32,81 +30,124 @@ const Dashboard = () => {
 
   const currentPathId = (!folderId || folderId === 'root') ? null : folderId;
 
-  const {
-    viewMode,
-    setFiles,
-    setFolders,
-    setCurrentFolderId,
-    setBreadcrumbs,
-    getSortedAndFilteredItems
-  } = useFileStore();
+  const { viewMode, setFiles, setFolders, setCurrentFolderId, setBreadcrumbs, getSortedAndFilteredItems } = useFileStore();
 
-  const [uploadOpen, setUploadOpen] = useState(false);
+  const [uploadOpen,    setUploadOpen]    = useState(false);
   const [newFolderOpen, setNewFolderOpen] = useState(false);
-  const [renameModal, setRenameModal] = useState({ open: false, item: null });
-  const [deleteModal, setDeleteModal] = useState({ open: false, item: null });
-  const [shareModal, setShareModal] = useState({ open: false, item: null });
-  const [moveModal, setMoveModal] = useState({ open: false, item: null });
-  const [previewModal, setPreviewModal] = useState({ open: false, file: null });
+  const [renameModal,   setRenameModal]   = useState({ open: false, item: null });
+  const [deleteModal,   setDeleteModal]   = useState({ open: false, item: null });
+  const [shareModal,    setShareModal]    = useState({ open: false, item: null });
+  const [moveModal,     setMoveModal]     = useState({ open: false, item: null });
+  const [previewModal,  setPreviewModal]  = useState({ open: false, file: null });
 
   const invalidate = () => {
-    qc.invalidateQueries({ queryKey: ['folders', currentPathId] });
-    qc.invalidateQueries({ queryKey: ['files', currentPathId] });
+    qc.invalidateQueries({ queryKey: ['folders',  currentPathId] });
+    qc.invalidateQueries({ queryKey: ['files',    currentPathId] });
+    qc.invalidateQueries({ queryKey: ['starred'] });
   };
 
   const { data: folderData, isLoading: fLoading } = useQuery({
     queryKey: ['folders', currentPathId],
-    queryFn: () => folderAPI.getFolders(currentPathId).then(r => r.data),
+    queryFn:  () => folderAPI.getFolders(currentPathId).then(r => r.data),
   });
 
   const { data: fileData, isLoading: fiLoading } = useQuery({
     queryKey: ['files', currentPathId],
-    queryFn: () => fileAPI.getFiles(currentPathId).then(r => r.data),
+    queryFn:  () => fileAPI.getFiles(currentPathId).then(r => r.data),
   });
 
+  // ── Fetch starred separately and merge is_starred onto cards ─────────────
+  // The /files and /folders endpoints don't return is_starred — only /stars does.
+  const { data: starredData } = useQuery({
+    queryKey: ['starred'],
+    queryFn:  () => starAPI.getStarred().then(r => r.data),
+  });
+
+  // "file:uuid" or "folder:uuid" — O(1) lookup
+  const starredSet = new Set(
+    Array.isArray(starredData) ? starredData.map(s => `${s.type}:${s.id}`) : []
+  );
+
   useEffect(() => {
-    if (Array.isArray(folderData)) setFolders(folderData);
-    if (Array.isArray(fileData)) setFiles(fileData);
+    if (Array.isArray(folderData)) {
+      setFolders(folderData.map(f => ({
+        ...f,
+        type:       'folder',
+        is_starred: starredSet.has(`folder:${f.id}`),
+      })));
+    }
+    if (Array.isArray(fileData)) {
+      setFiles(fileData.map(f => ({
+        ...f,
+        type:       'file',
+        is_starred: starredSet.has(`file:${f.id}`),
+      })));
+    }
     setCurrentFolderId(currentPathId);
     setBreadcrumbs(generateBreadcrumbs(folderData, currentPathId));
-  }, [folderData, fileData, currentPathId]);
+  }, [folderData, fileData, starredData, currentPathId]);
 
+  // ── Handlers ──────────────────────────────────────────────────────────────
   const handleDownload = async (file) => {
-    if (!file?.id) return toast.error("File data missing");
+    if (!file?.id) return toast.error('File data missing');
     try {
       const { data } = await fileAPI.downloadFile(file.id);
       if (data?.url) window.open(data.url, '_blank');
-      else {
-        const url = window.URL.createObjectURL(new Blob([data]));
-        const link = document.createElement('a');
-        link.href = url;
-        link.setAttribute('download', file.name);
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
+    } catch { toast.error('Download failed'); }
+  };
+
+  const handleRename = (item) => setRenameModal({ open: true, item });
+  const handleMove   = (item) => setMoveModal  ({ open: true, item });
+  const handleDelete = (item) => setDeleteModal({ open: true, item });
+  const handleShare  = (item) => setShareModal ({ open: true, item });
+
+  const handleStar = async (item) => {
+    if (!item?.id) return;
+    const type      = item.type || (item.mime_type ? 'file' : 'folder');
+    const isStarred = starredSet.has(`${type}:${item.id}`);
+    try {
+      if (isStarred) {
+        await starAPI.unstar(type, item.id);
+        toast.success('Removed from starred');
+      } else {
+        await starAPI.star(type, item.id);
+        toast.success('Added to starred');
       }
-    } catch (err) { toast.error("Download failed"); }
+      invalidate();
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Failed to update starred');
+    }
+  };
+
+  // ── Modal API callers ─────────────────────────────────────────────────────
+  const doRename = async (item, newName) => {
+    item.type === 'folder'
+      ? await folderAPI.renameFolder(item.id, { name: newName })
+      : await fileAPI.renameFile(item.id, { name: newName });
+    invalidate();
+  };
+
+  const doMove = async (item, targetId) => {
+    item.type === 'folder'
+      ? await folderAPI.moveFolder(item.id, { parent_id: targetId ?? null })
+      : await fileAPI.moveFile(item.id, { folder_id: targetId ?? null });
+    invalidate();
+  };
+
+  const doDelete = async (item) => {
+    item.type === 'folder'
+      ? await folderAPI.deleteFolder(item.id)
+      : await fileAPI.deleteFile(item.id);
+    invalidate();
   };
 
   const commonProps = {
-    onDownload: (item) => handleDownload(item),
-    onRename: async (item, newName) => {
-      item.type === 'folder' ? await folderAPI.rename(item.id, newName) : await fileAPI.rename(item.id, newName);
-      invalidate();
-    },
-    onMove: async (item, targetId) => {
-      item.type === 'folder' ? await folderAPI.move(item.id, targetId) : await fileAPI.move(item.id, targetId);
-      invalidate();
-    },
-    onDelete: async (item) => {
-      item.type === 'folder' ? await folderAPI.delete(item.id) : await fileAPI.delete(item.id);
-      invalidate();
-    },
-    onShare: (item) => setShareModal({ open: true, item }),
-    onStar: async (item) => {
-      item.is_starred ? await starAPI.unstar(item.type, item.id) : await starAPI.star(item.type, item.id);
-      invalidate();
-    },
+    onDownload: handleDownload,
+    onRename:   handleRename,
+    onMove:     handleMove,
+    onDelete:   handleDelete,
+    onShare:    handleShare,
+    onStar:     handleStar,
   };
 
   const items = getSortedAndFilteredItems();
@@ -126,31 +167,36 @@ const Dashboard = () => {
           {fLoading || fiLoading ? (
             <Skeletons count={12} viewMode={viewMode} />
           ) : items.length > 0 ? (
-            <div className={viewMode === 'grid' ? "grid gap-6 grid-cols-[repeat(auto-fill,minmax(220px,1fr))]" : ""}>
-              {items.map((item) => (
-                <div key={item.id}>
-                  {item.type === 'folder' ? (
-                    <FolderCard folder={item} onOpen={(f) => navigate(`/folder/${f.id}`)} {...commonProps} />
+            viewMode === 'grid' ? (
+              <div className="grid gap-6 grid-cols-[repeat(auto-fill,minmax(220px,1fr))]">
+                {items.map((item) =>
+                  item.type === 'folder' ? (
+                    <FolderCard key={item.id} folder={item} onOpen={(f) => navigate(`/folder/${f.id}`)} {...commonProps} />
                   ) : (
-                    <FileCard file={item} onClick={(f) => setPreviewModal({ open: true, file: f })} {...commonProps} />
-                  )}
-                </div>
-              ))}
-            </div>
+                    <FileCard key={item.id} file={item} onClick={(f) => setPreviewModal({ open: true, file: f })} {...commonProps} />
+                  )
+                )}
+              </div>
+            ) : (
+              <FileList
+                items={items}
+                {...commonProps}
+                onClick={(item) => item.type === 'folder' ? navigate(`/folder/${item.id}`) : setPreviewModal({ open: true, file: item })}
+              />
+            )
           ) : (
             <EmptyState type="files" onUpload={() => setUploadOpen(true)} onCreateFolder={() => setNewFolderOpen(true)} />
           )}
         </main>
       </div>
 
-      {/* MODALS LAYER - SPREAD commonProps into EVERY modal */}
       <UploadModal isOpen={uploadOpen} onClose={() => setUploadOpen(false)} folderId={currentPathId} onUploadComplete={invalidate} />
-      <NewFolderModal isOpen={newFolderOpen} onClose={() => setNewFolderOpen(false)} parentFolderId={currentPathId} onCreateFolder={(data) => folderAPI.create(data).then(invalidate)} />
-      <RenameModal isOpen={renameModal.open} item={renameModal.item} onClose={() => setRenameModal({ open: false, item: null })} {...commonProps} />
-      <DeleteModal isOpen={deleteModal.open} item={deleteModal.item} onClose={() => setDeleteModal({ open: false, item: null })} {...commonProps} />
+      <NewFolderModal isOpen={newFolderOpen} onClose={() => setNewFolderOpen(false)} parentFolderId={currentPathId} onCreateFolder={(data) => folderAPI.createFolder(data).then(invalidate)} />
+      <RenameModal isOpen={renameModal.open} item={renameModal.item} onClose={() => setRenameModal({ open: false, item: null })} onRename={doRename} />
+      <DeleteModal isOpen={deleteModal.open} item={deleteModal.item} onClose={() => setDeleteModal({ open: false, item: null })} onDelete={doDelete} />
       <ShareModal isOpen={shareModal.open} item={shareModal.item} onClose={() => setShareModal({ open: false, item: null })} />
-      <MoveModal isOpen={moveModal.open} item={moveModal.item} onClose={() => setMoveModal({ open: false, item: null })} {...commonProps} />
-      <FilePreviewModal isOpen={previewModal.open} file={previewModal.file} onClose={() => setPreviewModal({ open: false, file: null })} {...commonProps} />
+      <MoveModal isOpen={moveModal.open} item={moveModal.item} onClose={() => setMoveModal({ open: false, item: null })} onMove={doMove} />
+      <FilePreviewModal isOpen={previewModal.open} file={previewModal.file} onClose={() => setPreviewModal({ open: false, file: null })} onDownload={handleDownload} onShare={handleShare} />
     </div>
   );
 };

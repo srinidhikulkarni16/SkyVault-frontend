@@ -18,24 +18,25 @@ const FileCard = ({ file, onDownload, onRename, onMove, onDelete, onShare, onSta
     return () => document.removeEventListener('mousedown', handler);
   }, [menuOpen]);
 
+  // Wraps a handler: stops propagation, closes menu, then calls fn WITH the file
   const action = (fn) => (e) => {
     e.stopPropagation();
     setMenuOpen(false);
-    fn();
+    fn(file);
   };
 
   return (
     <div
-      onClick={() => onClick(file)}
+      onClick={() => onClick?.(file)}
       className={`group relative bg-white border rounded-[2rem] p-5 cursor-pointer transition-all duration-300 hover:shadow-xl hover:shadow-stone-200/50 hover:-translate-y-1.5 ${
-        isSelected 
-          ? 'border-lime-600 ring-2 ring-lime-600/10 bg-lime-50/30' 
+        isSelected
+          ? 'border-lime-600 ring-2 ring-lime-600/10 bg-lime-50/30'
           : 'border-stone-200 hover:border-stone-300'
       }`}
     >
       {/* Top row */}
       <div className="flex items-start justify-between mb-4">
-        {/* Icon (click to select) */}
+        {/* Icon — click to select */}
         <div
           onClick={(e) => {
             e.stopPropagation();
@@ -63,27 +64,55 @@ const FileCard = ({ file, onDownload, onRename, onMove, onDelete, onShare, onSta
                 setMenuOpen(!menuOpen);
               }}
               className={`flex items-center justify-center w-8 h-8 rounded-xl transition-all duration-200 ${
-                menuOpen 
-                  ? 'bg-stone-900 text-white' 
+                menuOpen
+                  ? 'bg-stone-900 text-white'
                   : 'text-stone-400 hover:text-stone-900 hover:bg-stone-100 opacity-0 group-hover:opacity-100'
               }`}
             >
               <MoreVertical size={16} />
             </button>
 
-            {/* Dropdown Menu */}
+            {/* Dropdown */}
             {menuOpen && (
               <div className="absolute right-0 top-full mt-2 z-50 min-w-[180px] bg-white border border-stone-200 rounded-2xl shadow-2xl py-2 overflow-hidden animate-in fade-in zoom-in-95 duration-200 origin-top-right">
-                <button className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-stone-600 hover:bg-stone-50 hover:text-lime-800 transition-colors" onClick={action(onDownload)}><Download size={14} /> Download</button>
-                <button className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-stone-600 hover:bg-stone-50 hover:text-lime-800 transition-colors" onClick={action(onRename)}><Edit size={14} /> Rename</button>
-                <button className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-stone-600 hover:bg-stone-50 hover:text-lime-800 transition-colors" onClick={action(onMove)}><Move size={14} /> Move</button>
-                <button className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-stone-600 hover:bg-stone-50 hover:text-lime-800 transition-colors" onClick={action(onShare)}><Share2 size={14} /> Share</button>
-                <button className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-stone-600 hover:bg-stone-50 hover:text-lime-800 transition-colors" onClick={action(onStar)}>
+                <button
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-stone-600 hover:bg-stone-50 hover:text-lime-800 transition-colors"
+                  onClick={action(onDownload)}
+                >
+                  <Download size={14} /> Download
+                </button>
+                <button
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-stone-600 hover:bg-stone-50 hover:text-lime-800 transition-colors"
+                  onClick={action(onRename)}
+                >
+                  <Edit size={14} /> Rename
+                </button>
+                <button
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-stone-600 hover:bg-stone-50 hover:text-lime-800 transition-colors"
+                  onClick={action(onMove)}
+                >
+                  <Move size={14} /> Move
+                </button>
+                <button
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-stone-600 hover:bg-stone-50 hover:text-lime-800 transition-colors"
+                  onClick={action(onShare)}
+                >
+                  <Share2 size={14} /> Share
+                </button>
+                <button
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-stone-600 hover:bg-stone-50 hover:text-lime-800 transition-colors"
+                  onClick={action(onStar)}
+                >
                   <Star size={14} className={file.is_starred ? 'text-amber-500 fill-amber-500' : ''} />
                   {file.is_starred ? 'Unstar Item' : 'Star Item'}
                 </button>
                 <div className="my-1.5 border-t border-stone-100" />
-                <button className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-bold text-red-500 hover:bg-red-50 transition-colors" onClick={action(onDelete)}><Trash2 size={14} /> Move to Trash</button>
+                <button
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-bold text-red-500 hover:bg-red-50 transition-colors"
+                  onClick={action(onDelete)}
+                >
+                  <Trash2 size={14} /> Move to Trash
+                </button>
               </div>
             )}
           </div>
@@ -92,8 +121,8 @@ const FileCard = ({ file, onDownload, onRename, onMove, onDelete, onShare, onSta
 
       {/* File Info */}
       <div className="space-y-1">
-        <h3 
-          className="text-sm font-bold text-stone-900 truncate tracking-tight group-hover:text-lime-900 transition-colors" 
+        <h3
+          className="text-sm font-bold text-stone-900 truncate tracking-tight group-hover:text-lime-900 transition-colors"
           title={file.name}
         >
           {file.name}
@@ -103,7 +132,7 @@ const FileCard = ({ file, onDownload, onRename, onMove, onDelete, onShare, onSta
         </p>
       </div>
 
-      {/* Selection Indicator Dot */}
+      {/* Selection Dot */}
       {isSelected && (
         <div className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-lime-800 border-2 border-white rounded-full shadow-sm animate-in zoom-in" />
       )}

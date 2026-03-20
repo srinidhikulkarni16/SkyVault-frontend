@@ -23,8 +23,8 @@ const queryClient = new QueryClient({
 });
 
 const Spinner = () => (
-  <div style={{ minHeight: '100vh', background: 'var(--surface-0)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-    <div style={{ width: 36, height: 36, border: '2.5px solid var(--brand)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.75s linear infinite' }} />
+  <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+    <div className="w-9 h-9 rounded-full border-2 border-indigo-600 border-t-transparent animate-spin" />
   </div>
 );
 
@@ -43,18 +43,18 @@ const PublicRoute = ({ children }) => {
 function AppRoutes() {
   return (
     <Routes>
-      <Route path="/login"          element={<PublicRoute><Login /></PublicRoute>} />
-      <Route path="/register"       element={<PublicRoute><Register /></PublicRoute>} />
-      <Route path="/share/:token"   element={<PublicShare />} />
+      <Route path="/login"            element={<PublicRoute><Login /></PublicRoute>} />
+      <Route path="/register"         element={<PublicRoute><Register /></PublicRoute>} />
+      <Route path="/share/:token"     element={<PublicShare />} />
 
-      <Route path="/"               element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+      <Route path="/"                 element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="/folder/:folderId" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-      <Route path="/shared"         element={<ProtectedRoute><Shared /></ProtectedRoute>} />
-      <Route path="/starred"        element={<ProtectedRoute><Starred /></ProtectedRoute>} />
-      <Route path="/recent"         element={<ProtectedRoute><Recent /></ProtectedRoute>} />
-      <Route path="/trash"          element={<ProtectedRoute><Trash /></ProtectedRoute>} />
+      <Route path="/shared"           element={<ProtectedRoute><Shared /></ProtectedRoute>} />
+      <Route path="/starred"          element={<ProtectedRoute><Starred /></ProtectedRoute>} />
+      <Route path="/recent"           element={<ProtectedRoute><Recent /></ProtectedRoute>} />
+      <Route path="/trash"            element={<ProtectedRoute><Trash /></ProtectedRoute>} />
 
-      <Route path="*"               element={<Navigate to="/" replace />} />
+      <Route path="*"                 element={<Navigate to="/" replace />} />
     </Routes>
   );
 }

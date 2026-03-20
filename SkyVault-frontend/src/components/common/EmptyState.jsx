@@ -1,34 +1,55 @@
 import React from 'react';
-import { FolderOpen, Clock, Star, Users, Trash2, Upload, FolderPlus } from 'lucide-react';
+import { FolderOpen, Clock, Star, Users, Trash2, Upload, FolderPlus, Search } from 'lucide-react';
 
 const STATES = {
-  files:   { icon: FolderOpen, title: 'This folder is empty',         sub: 'Upload files or create a folder to get started.' },
-  recent:  { icon: Clock,      title: 'No recent files',              sub: 'Files you open or edit will appear here.' },
-  starred: { icon: Star,       title: 'No starred items',             sub: 'Star files and folders to find them quickly.' },
-  shared:  { icon: Users,      title: 'Nothing shared with you yet',  sub: 'Files and folders others share will appear here.' },
-  trash:   { icon: Trash2,     title: 'Trash is empty',               sub: 'Deleted items appear here for 30 days before removal.' },
-  search:  { icon: FolderOpen, title: 'No results found',             sub: 'Try a different search term.' },
+  files:   { icon: FolderOpen, title: 'This folder is empty',         sub: 'Your vault is ready. Upload files or create a folder to get started.' },
+  recent:  { icon: Clock,      title: 'No recent activity',           sub: 'Files you open or edit will appear here for quick access.'          },
+  starred: { icon: Star,       title: 'No favorites yet',             sub: 'Star important files and folders to keep them within reach.'        },
+  shared:  { icon: Users,      title: 'Nothing shared with you',      sub: 'Collaborations and shared resources will appear in this space.'     },
+  trash:   { icon: Trash2,     title: 'Your trash is empty',          sub: 'Deleted items are moved here for 30 days before permanent removal.' },
+  search:  { icon: Search,     title: 'No results found',             sub: 'We couldn’t find what you’re looking for. Try a different term.'   },
 };
 
 const EmptyState = ({ type = 'files', onUpload, onCreateFolder }) => {
   const { icon: Icon, title, sub } = STATES[type] || STATES.files;
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 300, padding: 40, textAlign: 'center' }}>
-      <div className="empty-icon-ring">
-        <Icon size={32} style={{ color: 'var(--text-3)' }} strokeWidth={1.5} />
+    <div className="flex flex-col items-center justify-center min-h-[400px] py-20 px-6 text-center animate-in fade-in zoom-in-95 duration-700">
+      {/* Decorative Icon Container */}
+      <div className="relative mb-6">
+        <div className="absolute inset-0 bg-lime-200/20 rounded-3xl blur-xl animate-pulse"></div>
+        <div className="relative w-20 h-20 rounded-[2rem] bg-white border border-stone-200 flex items-center justify-center shadow-sm">
+          <Icon size={32} className="text-lime-800" strokeWidth={1.5} />
+        </div>
       </div>
-      <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-2)', marginBottom: 6 }}>{title}</h3>
-      <p style={{ fontSize: '0.875rem', color: 'var(--text-3)', maxWidth: 300, lineHeight: 1.6 }}>{sub}</p>
+
+      {/* Text Content */}
+      <h3 className="text-xl font-bold text-stone-900 mb-2 tracking-tight">
+        {title}
+      </h3>
+      <p className="text-stone-500 max-w-[320px] leading-relaxed font-medium">
+        {sub}
+      </p>
+
+      {/* Action Buttons */}
       {(onUpload || onCreateFolder) && (
-        <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
+        <div className="flex flex-col sm:flex-row gap-3 mt-10">
           {onUpload && (
-            <button onClick={onUpload} className="btn btn-primary btn-sm">
-              <Upload size={14} /> Upload Files
+            <button 
+              onClick={onUpload}
+              className="group flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-lime-800 hover:bg-lime-900 text-white text-sm font-bold transition-all shadow-lg shadow-lime-900/20 active:scale-95"
+            >
+              <Upload size={16} className="group-hover:-translate-y-0.5 transition-transform" />
+              Upload Files
             </button>
           )}
           {onCreateFolder && (
-            <button onClick={onCreateFolder} className="btn btn-secondary btn-sm">
-              <FolderPlus size={14} /> New Folder
+            <button 
+              onClick={onCreateFolder}
+              className="flex items-center justify-center gap-2 px-6 py-3 rounded-2xl border border-stone-200 bg-white text-stone-600 hover:text-stone-900 hover:bg-stone-50 text-sm font-bold transition-all shadow-sm active:scale-95"
+            >
+              <FolderPlus size={16} />
+              New Folder
             </button>
           )}
         </div>

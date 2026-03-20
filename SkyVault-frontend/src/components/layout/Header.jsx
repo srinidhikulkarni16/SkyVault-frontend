@@ -4,9 +4,9 @@ import { useFileStore } from '../../store/fileStore';
 import { cn } from '../../lib/utils';
 
 const SORT_OPTIONS = [
-  { value: 'name',  label: 'Name' },
-  { value: 'date',  label: 'Modified' },
-  { value: 'size',  label: 'Size' },
+  { value: 'name', label: 'Name'     },
+  { value: 'date', label: 'Modified' },
+  { value: 'size', label: 'Size'     },
 ];
 
 const Header = ({ onUploadClick, onNewFolderClick }) => {
@@ -23,78 +23,99 @@ const Header = ({ onUploadClick, onNewFolderClick }) => {
   const currentSort = SORT_OPTIONS.find((o) => o.value === sortBy);
 
   return (
-    <header className="app-header">
-      {/* Search */}
-      <div style={{ flex: 1, maxWidth: 480, position: 'relative' }}>
-        <Search size={15} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-3)', pointerEvents: 'none' }} />
+    <header className="h-20 flex items-center gap-4 px-6 sm:px-10 bg-white/60 backdrop-blur-md border-b border-stone-100 shrink-0 sticky top-0 z-30">
+      {/* Search Bar */}
+      <div className="flex-1 max-w-md relative group">
+        <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 group-focus-within:text-lime-700 transition-colors" />
         <input
-          type="text"
-          value={searchQuery}
+          type="text" 
+          value={searchQuery} 
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search files and folders…"
-          className="input"
-          style={{ paddingLeft: 32, height: 36, fontSize: '0.875rem' }}
+          placeholder="Search your vault..."
+          className="w-full pl-11 pr-4 h-11 text-sm font-medium rounded-2xl border border-stone-200 bg-stone-50/50 text-stone-900 placeholder-stone-400 outline-none focus:ring-4 focus:ring-lime-600/10 focus:border-lime-700 transition-all"
         />
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
-        {/* Sort */}
-        {(onUploadClick || onNewFolderClick) && (
-          <div ref={sortRef} style={{ position: 'relative' }}>
-            <button
-              onClick={() => setSortOpen(!sortOpen)}
-              className="btn btn-ghost btn-sm"
-              style={{ gap: 4, color: 'var(--text-3)', fontSize: '0.8125rem' }}
-            >
-              {currentSort?.label}
-              <ChevronDown size={13} style={{ transition: 'transform 0.15s', transform: sortOpen ? 'rotate(180deg)' : 'none' }} />
-            </button>
-            {sortOpen && (
-              <div className="context-menu" style={{ right: 0, top: '100%', minWidth: 160 }}>
-                {SORT_OPTIONS.map((opt) => (
-                  <button key={opt.value} className="context-item" onClick={() => { setSortBy(opt.value); setSortOpen(false); }}>
-                    {sortBy === opt.value && <Check size={12} style={{ color: 'var(--brand)' }} />}
-                    {sortBy !== opt.value && <span style={{ width: 12 }} />}
-                    {opt.label}
-                  </button>
-                ))}
-                <div className="context-divider" />
-                <button className="context-item" onClick={() => { setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); setSortOpen(false); }}>
-                  {sortOrder === 'asc' ? '↑ Ascending' : '↓ Descending'}
-                </button>
-              </div>
+      <div className="flex items-center gap-3 ml-auto">
+        {/* Sort Dropdown */}
+        <div ref={sortRef} className="relative hidden md:block">
+          <button
+            onClick={() => setSortOpen(!sortOpen)}
+            className={cn(
+              "flex items-center gap-2 h-11 px-4 rounded-2xl border text-sm font-bold transition-all active:scale-95",
+              sortOpen 
+                ? "bg-stone-900 border-stone-900 text-white" 
+                : "bg-white border-stone-200 text-stone-600 hover:border-stone-400"
             )}
-          </div>
-        )}
+          >
+            <span className="text-xs uppercase tracking-widest opacity-60 font-black">Sort:</span>
+            {currentSort?.label}
+            <ChevronDown size={14} className={cn("transition-transform duration-300", sortOpen && "rotate-180")} />
+          </button>
 
-        {/* View toggle */}
-        <div style={{ display: 'flex', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: 2, gap: 2 }}>
-          {[['grid', Grid3x3], ['list', List]].map(([mode, Icon]) => (
+          {sortOpen && (
+            <div className="absolute right-0 top-[calc(100%+8px)] z-50 min-w-[200px] bg-white border border-stone-200 rounded-[2rem] shadow-2xl py-2 overflow-hidden animate-in fade-in zoom-in-95 duration-200 origin-top-right">
+              {SORT_OPTIONS.map((opt) => (
+                <button 
+                  key={opt.value}
+                  onClick={() => { setSortBy(opt.value); setSortOpen(false); }}
+                  className="w-full flex items-center justify-between px-5 py-3 text-sm font-semibold text-stone-600 hover:bg-stone-50 hover:text-lime-800 transition-colors"
+                >
+                  {opt.label}
+                  {sortBy === opt.value && <Check size={14} className="text-lime-700" />}
+                </button>
+              ))}
+              <div className="my-2 border-t border-stone-100" />
+              <button
+                onClick={() => { setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); setSortOpen(false); }}
+                className="w-full flex items-center gap-2 px-5 py-3 text-xs font-black uppercase tracking-widest text-stone-400 hover:bg-stone-50 hover:text-stone-900 transition-colors"
+              >
+                {sortOrder === 'asc' ? '↑ Ascending' : '↓ Descending'}
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* View Toggle */}
+        <div className="flex items-center bg-stone-100/80 rounded-2xl p-1 gap-1 border border-stone-200/50">
+          {[
+            { mode: 'grid', icon: Grid3x3 },
+            { mode: 'list', icon: List }
+          ].map(({ mode, icon: Icon }) => (
             <button
               key={mode}
               onClick={() => setViewMode(mode)}
-              className={cn('btn btn-icon btn-sm', viewMode === mode && 'btn-primary')}
-              style={{ padding: 5, borderRadius: 4 }}
-              title={`${mode} view`}
+              className={cn(
+                'flex items-center justify-center w-9 h-9 rounded-xl transition-all duration-300',
+                viewMode === mode
+                  ? 'bg-white text-lime-800 shadow-sm'
+                  : 'text-stone-400 hover:text-stone-600 hover:bg-white/50'
+              )}
             >
-              <Icon size={14} />
+              <Icon size={16} strokeWidth={viewMode === mode ? 2.5 : 2} />
             </button>
           ))}
         </div>
 
-        {/* New Folder */}
+        {/* New Folder Button */}
         {onNewFolderClick && (
-          <button onClick={onNewFolderClick} className="btn btn-secondary btn-sm" style={{ gap: 6 }}>
-            <FolderPlus size={14} />
+          <button 
+            onClick={onNewFolderClick}
+            className="hidden sm:flex items-center gap-2 h-11 px-5 rounded-2xl border border-stone-200 bg-white text-stone-600 hover:text-stone-900 hover:bg-stone-50 text-sm font-bold transition-all active:scale-95 shadow-sm"
+          >
+            <FolderPlus size={16} />
             <span>New Folder</span>
           </button>
         )}
 
-        {/* Upload */}
+        {/* Upload Button */}
         {onUploadClick && (
-          <button onClick={onUploadClick} className="btn btn-primary btn-sm" style={{ gap: 6 }}>
-            <Upload size={14} />
-            <span>Upload</span>
+          <button 
+            onClick={onUploadClick}
+            className="flex items-center gap-2 h-11 px-6 rounded-2xl bg-lime-800 hover:bg-lime-900 text-white text-sm font-bold transition-all active:scale-95 shadow-lg shadow-lime-900/20"
+          >
+            <Upload size={16} />
+            <span className="hidden xs:inline">Upload</span>
           </button>
         )}
       </div>

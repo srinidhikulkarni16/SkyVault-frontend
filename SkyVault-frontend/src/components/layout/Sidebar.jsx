@@ -5,11 +5,11 @@ import { useAuth } from '../../contexts/AuthContext';
 import { cn } from '../../lib/utils';
 
 const NAV = [
-  { label: 'My Drive',       path: '/',        icon: Home  },
-  { label: 'Shared with me', path: '/shared',  icon: Users },
-  { label: 'Starred',        path: '/starred', icon: Star  },
-  { label: 'Recent',         path: '/recent',  icon: Clock },
-  { label: 'Trash',          path: '/trash',   icon: Trash2 },
+  { label: 'My Drive',         path: '/',         icon: Home   },
+  { label: 'Shared with me',   path: '/shared',   icon: Users  },
+  { label: 'Starred',          path: '/starred',  icon: Star   },
+  { label: 'Recent',           path: '/recent',   icon: Clock  },
+  { label: 'Trash',            path: '/trash',    icon: Trash2 },
 ];
 
 const STORAGE_USED  = 2.5;
@@ -23,56 +23,83 @@ const Sidebar = () => {
   const isActive = (path) =>
     path === '/' ? pathname === '/' || pathname.startsWith('/folder/') : pathname === path;
 
-  const initials = (user?.name || 'U').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+  const initials = (user?.name || 'U').split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2);
 
   return (
-    <aside className="sidebar">
-      {/* Logo */}
-      <div style={{ padding: '0 16px', height: 60, display: 'flex', alignItems: 'center', gap: 10, borderBottom: '1px solid var(--border)' }}>
-        <div style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--brand)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Cloud size={18} color="#fff" />
+    <aside className="flex flex-col w-64 shrink-0 bg-stone-50 border-r border-stone-200 h-screen sticky top-0 z-40">
+      {/* Branding */}
+      <div className="h-20 flex items-center gap-3 px-8 shrink-0">
+        <div className="w-10 h-10 rounded-2xl bg-lime-800 flex items-center justify-center shadow-lg shadow-lime-900/20 transform transition-transform hover:rotate-3">
+          <Cloud size={20} className="text-white" strokeWidth={2.5} />
         </div>
-        <span style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: '1.1rem', color: 'var(--text-1)' }}>SkyVault</span>
+        <span className="font-black text-stone-900 text-xl tracking-tighter">SkyVault</span>
       </div>
 
-      {/* Nav */}
-      <nav style={{ flex: 1, padding: '12px 8px', display: 'flex', flexDirection: 'column', gap: 2 }}>
+      {/* Navigation */}
+      <nav className="flex-1 px-4 py-6 flex flex-col gap-1.5 overflow-y-auto">
         {NAV.map(({ label, path, icon: Icon }) => (
-          <Link key={path} to={path} className={cn('sidebar-link', isActive(path) && 'active')}>
-            <Icon size={16} />
+          <Link
+            key={path} 
+            to={path}
+            className={cn(
+              'flex items-center gap-3.5 px-4 py-3 rounded-2xl text-sm font-bold transition-all duration-300 no-underline group active:scale-95',
+              isActive(path)
+                ? 'bg-lime-800 text-white shadow-md shadow-lime-900/10'
+                : 'text-stone-500 hover:text-lime-800 hover:bg-lime-100/50'
+            )}
+          >
+            <Icon 
+              size={18} 
+              className={cn("shrink-0 transition-transform duration-300 group-hover:scale-110", isActive(path) ? "text-white" : "text-stone-400 group-hover:text-lime-700")} 
+              strokeWidth={isActive(path) ? 2.5 : 2}
+            />
             {label}
           </Link>
         ))}
       </nav>
 
-      {/* Storage */}
-      <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)' }}>
-        <div style={{ background: 'var(--surface-3)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '12px 14px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Storage</span>
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-2)', fontWeight: 600 }}>{STORAGE_USED} / {STORAGE_TOTAL} GB</span>
+      {/* Storage Widget
+      <div className="px-5 py-6 shrink-0">
+        <div className="bg-white border border-stone-200 rounded-[2rem] p-5 shadow-sm">
+          <div className="flex justify-between items-end mb-3">
+            <div>
+              <p className="text-[10px] font-black text-stone-400 uppercase tracking-[0.2em] mb-1">Storage</p>
+              <p className="text-xs font-bold text-stone-900">{STORAGE_USED} GB <span className="text-stone-400 font-medium">used</span></p>
+            </div>
+            <span className="text-[10px] font-bold text-lime-800 bg-lime-50 px-2 py-0.5 rounded-full">
+              {Math.round(STORAGE_PCT)}%
+            </span>
           </div>
-          <div className="storage-bar">
-            <div className="storage-fill" style={{ width: `${STORAGE_PCT}%` }} />
+          
+          <div className="h-2 bg-stone-100 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-lime-800 rounded-full transition-all duration-1000 ease-out"
+              style={{ width: `${STORAGE_PCT}%` }}
+            />
           </div>
-          <p style={{ fontSize: '0.7rem', color: 'var(--text-3)', marginTop: 6 }}>
-            {(STORAGE_TOTAL - STORAGE_USED).toFixed(1)} GB available
+          
+          <p className="text-[10px] text-stone-400 mt-3 font-semibold italic text-center">
+            {(STORAGE_TOTAL - STORAGE_USED).toFixed(1)} GB of earthy space left
           </p>
         </div>
-      </div>
+      </div> */}
 
-      {/* User */}
-      <div style={{ padding: '10px 8px', borderTop: '1px solid var(--border)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px', borderRadius: 'var(--radius-md)' }}>
-          <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'rgba(79,110,247,0.2)', border: '1px solid rgba(79,110,247,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--brand-light)', fontSize: '0.8rem', fontWeight: 700, flexShrink: 0 }}>
+      {/* User Profile Section */}
+      <div className="px-4 py-4 border-t border-stone-200 shrink-0 bg-stone-100/30">
+        <div className="flex items-center gap-3 px-3 py-3 rounded-[1.5rem] bg-white border border-stone-200 shadow-sm transition-all hover:border-stone-300">
+          <div className="w-10 h-10 rounded-xl bg-lime-100 border border-lime-200 flex items-center justify-center text-lime-800 text-xs font-black shrink-0 shadow-inner">
             {initials}
           </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.name || 'User'}</p>
-            <p style={{ fontSize: '0.7rem', color: 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.email}</p>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold text-stone-900 truncate tracking-tight">{user?.name || 'Explorer'}</p>
+            <p className="text-[10px] font-medium text-stone-400 truncate uppercase tracking-wider">{user?.email}</p>
           </div>
-          <button onClick={logout} className="btn btn-icon btn-ghost" title="Sign out">
-            <LogOut size={15} />
+          <button 
+            onClick={logout} 
+            title="Sign out"
+            className="p-2 rounded-xl text-stone-400 hover:text-red-600 hover:bg-red-50 transition-all active:scale-90"
+          >
+            <LogOut size={16} strokeWidth={2.5} />
           </button>
         </div>
       </div>

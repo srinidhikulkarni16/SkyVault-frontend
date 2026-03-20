@@ -1,12 +1,32 @@
 import React from 'react';
 
-const PageTitle = ({ title, sub, action }) => (
-  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px', borderBottom: '1px solid var(--border)', background: 'var(--surface-1)', flexShrink: 0 }}>
-    <div>
-      <h1 style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--text-1)', margin: 0 }}>{title}</h1>
-      {sub && <p style={{ fontSize: '0.8125rem', color: 'var(--text-3)', marginTop: 2 }}>{sub}</p>}
+const PageTitle = ({ title, sub, action, className = '' }) => (
+  <div className={`
+    flex items-center justify-between 
+    px-6 py-6 sm:px-10 
+    bg-white/40 backdrop-blur-md 
+    border-b border-stone-200/60 
+    shrink-0 z-10
+    animate-in fade-in slide-in-from-top-4 duration-500
+    ${className}
+  `}>
+    <div className="flex flex-col gap-1">
+      <h1 className="text-2xl sm:text-3xl font-black text-stone-900 tracking-tight leading-none">
+        {title}
+      </h1>
+      {sub && (
+        <p className="text-sm font-medium text-stone-500 tracking-wide">
+          {sub}
+        </p>
+      )}
     </div>
-    {action}
+
+    {/* Action Slot (e.g., Empty Trash button, Search filters) */}
+    {action && (
+      <div className="flex items-center gap-3 animate-in fade-in zoom-in-95 delay-200">
+        {action}
+      </div>
+    )}
   </div>
 );
 

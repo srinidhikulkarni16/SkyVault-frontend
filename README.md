@@ -1,12 +1,12 @@
 **SkyVault – Frontend**
 
-** 📌 Description **
+ 📌 Description 
 
 SkyVault is a cloud-based file storage web application that delivers a seamless and intuitive interface for managing, organizing, and sharing files securely.
 
 
 
-**🚀 Features **
+🚀 Features 
 
 * Authentication (login/register)
 * File & folder management (CRUD)
@@ -18,7 +18,7 @@ SkyVault is a cloud-based file storage web application that delivers a seamless 
 
 
 
-** 🧱 Tech Stack**
+ 🧱 Tech Stack
 
 * React
 * Tailwind CSS

@@ -1,6 +1,6 @@
 import React from 'react';
 
-/** ─── Grid View Skeleton ─── */
+/**  Grid View Skeleton  */
 export const SkeletonCard = () => (
   <div className="bg-white border border-stone-200 rounded-[2rem] p-5 pointer-events-none shadow-sm shadow-stone-200/50">
     <div className="flex justify-between items-start mb-6">
@@ -16,7 +16,7 @@ export const SkeletonCard = () => (
   </div>
 );
 
-/** ─── List View Skeleton ─── */
+/*  List View Skeleton  */
 export const SkeletonRow = () => (
   <div className="grid grid-cols-[1fr_120px_120px_80px_40px] items-center gap-6 px-6 py-4 border-b border-stone-100 pointer-events-none last:border-0">
     <div className="flex items-center gap-4">

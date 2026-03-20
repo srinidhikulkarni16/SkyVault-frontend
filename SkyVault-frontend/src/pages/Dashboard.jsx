@@ -56,14 +56,13 @@ const Dashboard = () => {
     queryFn:  () => fileAPI.getFiles(currentPathId).then(r => r.data),
   });
 
-  // ── Fetch starred separately and merge is_starred onto cards ─────────────
+  //  Fetch starred separately and merge is_starred onto cards 
   // The /files and /folders endpoints don't return is_starred — only /stars does.
   const { data: starredData } = useQuery({
     queryKey: ['starred'],
     queryFn:  () => starAPI.getStarred().then(r => r.data),
   });
 
-  // "file:uuid" or "folder:uuid" — O(1) lookup
   const starredSet = new Set(
     Array.isArray(starredData) ? starredData.map(s => `${s.type}:${s.id}`) : []
   );
@@ -87,7 +86,7 @@ const Dashboard = () => {
     setBreadcrumbs(generateBreadcrumbs(folderData, currentPathId));
   }, [folderData, fileData, starredData, currentPathId]);
 
-  // ── Handlers ──────────────────────────────────────────────────────────────
+  //  Handlers 
   const handleDownload = async (file) => {
     if (!file?.id) return toast.error('File data missing');
     try {
@@ -119,7 +118,7 @@ const Dashboard = () => {
     }
   };
 
-  // ── Modal API callers ─────────────────────────────────────────────────────
+  //  Modal API callers 
   const doRename = async (item, newName) => {
     item.type === 'folder'
       ? await folderAPI.renameFolder(item.id, { name: newName })
@@ -191,11 +190,17 @@ const Dashboard = () => {
       </div>
 
       <UploadModal isOpen={uploadOpen} onClose={() => setUploadOpen(false)} folderId={currentPathId} onUploadComplete={invalidate} />
+
       <NewFolderModal isOpen={newFolderOpen} onClose={() => setNewFolderOpen(false)} parentFolderId={currentPathId} onCreateFolder={(data) => folderAPI.createFolder(data).then(invalidate)} />
+
       <RenameModal isOpen={renameModal.open} item={renameModal.item} onClose={() => setRenameModal({ open: false, item: null })} onRename={doRename} />
+
       <DeleteModal isOpen={deleteModal.open} item={deleteModal.item} onClose={() => setDeleteModal({ open: false, item: null })} onDelete={doDelete} />
+
       <ShareModal isOpen={shareModal.open} item={shareModal.item} onClose={() => setShareModal({ open: false, item: null })} />
+
       <MoveModal isOpen={moveModal.open} item={moveModal.item} onClose={() => setMoveModal({ open: false, item: null })} onMove={doMove} />
+
       <FilePreviewModal isOpen={previewModal.open} file={previewModal.file} onClose={() => setPreviewModal({ open: false, file: null })} onDownload={handleDownload} onShare={handleShare} />
     </div>
   );

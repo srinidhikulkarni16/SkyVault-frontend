@@ -6,7 +6,7 @@ import { GoogleLogin } from '@react-oauth/google';
 import toast from 'react-hot-toast';
 
 const FEATURES = [
-  { icon: ShieldCheck, label: 'AES-256 Encryption', sub: 'Military-grade security' },
+  // { icon: ShieldCheck, label: 'AES-256 Encryption', sub: 'Military-grade security' },
   { icon: Zap, label: 'Lightning Fast Uploads', sub: 'Multipart & resumable' },
   { icon: Globe, label: 'Access Anywhere', sub: 'Web, mobile, desktop' },
 ];
@@ -175,7 +175,7 @@ const Login = () => {
               className="w-full flex items-center justify-center gap-2 py-3.5 px-4 bg-lime-800 hover:bg-lime-900 text-white rounded-xl font-bold shadow-lg shadow-lime-900/20 transition-all duration-300 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
             >
               {loading && <Loader2 size={18} className="animate-spin" />}
-              {loading ? 'Signing in...' : 'Sign In'}
+              {loading ? 'Logging in...' : 'Log In'}
             </button>
           </form>
 

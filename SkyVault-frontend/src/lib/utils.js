@@ -1,4 +1,4 @@
-// ── Formatting ───────────────────────────────────────────────────────────────
+//  Formatting 
 export const formatFileSize = (bytes) => {
   if (!bytes || bytes === 0) return '0 B'
   const units = ['B', 'KB', 'MB', 'GB', 'TB']
@@ -22,7 +22,7 @@ export const formatDate = (dateStr) => {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: days > 365 ? 'numeric' : undefined })
 }
 
-// ── File icon/color mapping ──────────────────────────────────────────────────
+//  File icon/color mapping 
 export const getFileIcon = (mimeType = '', name = '') => {
   const ext = name.split('.').pop()?.toLowerCase()
   if (mimeType.startsWith('image/'))                  return 'Image'
@@ -55,7 +55,7 @@ export const isPreviewable = (mimeType = '') =>
   mimeType === 'application/pdf' ||
   mimeType.startsWith('text/')
 
-// ── Breadcrumbs ──────────────────────────────────────────────────────────────
+//  Breadcrumbs 
 export const generateBreadcrumbs = (folders, currentFolderId) => {
   if (!currentFolderId) return [{ id: null, name: 'My Drive' }]
   const crumbs = [{ id: null, name: 'My Drive' }]
@@ -66,7 +66,7 @@ export const generateBreadcrumbs = (folders, currentFolderId) => {
   return crumbs
 }
 
-// ── Clipboard ────────────────────────────────────────────────────────────────
+//  Clipboard 
 export const copyToClipboard = async (text) => {
   try {
     await navigator.clipboard.writeText(text)
@@ -80,5 +80,5 @@ export const copyToClipboard = async (text) => {
   }
 }
 
-// ── cn utility (classnames) ──────────────────────────────────────────────────
+//  cn utility (classnames) 
 export const cn = (...classes) => classes.filter(Boolean).join(' ')

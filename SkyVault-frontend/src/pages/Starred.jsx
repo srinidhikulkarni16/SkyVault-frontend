@@ -30,13 +30,10 @@ const Starred = () => {
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ['starred'] });
-    // Also bust dashboard cache so star indicators update when user goes back
     qc.invalidateQueries({ queryKey: ['files'] });
     qc.invalidateQueries({ queryKey: ['folders'] });
   };
-
-  // Items on this page always have is_starred: true (they came from /stars).
-  // Clicking star here always REMOVES from starred.
+  
   const handleStar = async (item) => {
     if (!item?.id) return;
     const type = item.type || (item.mime_type ? 'file' : 'folder');

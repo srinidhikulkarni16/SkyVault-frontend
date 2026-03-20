@@ -36,7 +36,7 @@ const PublicShare = () => {
     } catch { toast.error('Download failed'); }
   };
 
-  /* ── Loading State ── */
+  /*  Loading State  */
   if (loading) return (
     <div className="min-h-screen bg-stone-50 flex flex-col items-center justify-center gap-4">
       <Loader2 size={40} className="text-lime-800 animate-spin" />
@@ -44,7 +44,7 @@ const PublicShare = () => {
     </div>
   );
 
-  /* ── Error State ── */
+  /*  Error State  */
   if (error) return (
     <div className="min-h-screen bg-stone-100 flex items-center justify-center p-6">
       <div className="bg-white border border-stone-200 rounded-3xl p-10 max-w-sm w-full text-center shadow-xl shadow-stone-200/50">
@@ -61,7 +61,7 @@ const PublicShare = () => {
     </div>
   );
 
-  /* ── Password Gate ── */
+  /*  Password Gate  */
   if (needsPwd) return (
     <div className="min-h-screen bg-stone-50 flex items-center justify-center p-6 selection:bg-lime-800 selection:text-white">
       <div className="bg-white border border-stone-200 rounded-3xl p-8 sm:p-12 max-w-md w-full shadow-2xl shadow-stone-200/60 relative overflow-hidden">

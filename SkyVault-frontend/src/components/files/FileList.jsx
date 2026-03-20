@@ -35,7 +35,6 @@ const ListRow = ({ item, onDownload, onRename, onMove, onDelete, onShare, onStar
     >
       {/* Name Column */}
       <div className="flex items-center gap-4 min-w-0">
-        {/* Custom Earthy Checkbox */}
         <div
           onClick={(e) => {
             e.stopPropagation();

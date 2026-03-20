@@ -5,7 +5,6 @@ import { formatFileSize, formatDate } from '../lib/utils';
 import { RotateCcw, Trash2, AlertTriangle, X, Folder, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-// Layout & UI Components
 import Sidebar from '../components/layout/Sidebar';
 import Header from '../components/layout/Header';
 import EmptyState from '../components/common/EmptyState';

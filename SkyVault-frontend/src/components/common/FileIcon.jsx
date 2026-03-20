@@ -5,7 +5,6 @@ import {
 } from 'lucide-react';
 import { getFileIcon } from '../../lib/utils';
 
-// Mapping Lucide icons to our internal keys
 const ICON_MAP = {
   Image, Video, Music, FileText, Sheet: Table2, Presentation,
   Archive, Code, File, Folder,
@@ -15,8 +14,6 @@ const FileIcon = ({ mimeType = '', name = '', size = 20, className = '' }) => {
   const iconName = getFileIcon(mimeType, name);
   const Icon = ICON_MAP[iconName] || File;
 
-  // Define earthy accent colors based on file type groups
-  // This ensures the "Olive/Stone" theme remains dominant while providing visual cues
   const getEarthyColor = () => {
     if (mimeType.startsWith('image/')) return 'text-lime-700 bg-lime-50 border-lime-100';
     if (mimeType.startsWith('video/')) return 'text-orange-700 bg-orange-50 border-orange-100';
@@ -34,13 +31,11 @@ const FileIcon = ({ mimeType = '', name = '', size = 20, className = '' }) => {
       transition-all duration-300 group-hover:scale-110
       ${className}
     `}>
-      {/* Subtle background blob for a more "organic" feel */}
       <div className={`
         absolute inset-0 rounded-2xl border opacity-60
         ${themeClasses.split(' ').slice(1).join(' ')}
       `} />
       
-      {/* The Actual Icon */}
       <Icon
         size={size}
         className={`relative z-10 transition-colors duration-300 ${themeClasses.split(' ')[0]}`}

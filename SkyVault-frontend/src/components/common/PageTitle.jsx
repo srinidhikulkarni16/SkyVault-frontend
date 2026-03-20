@@ -21,7 +21,6 @@ const PageTitle = ({ title, sub, action, className = '' }) => (
       )}
     </div>
 
-    {/* Action Slot (e.g., Empty Trash button, Search filters) */}
     {action && (
       <div className="flex items-center gap-3 animate-in fade-in zoom-in-95 delay-200">
         {action}

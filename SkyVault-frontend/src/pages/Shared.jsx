@@ -30,10 +30,7 @@ const Shared = () => {
         {/* Main Content Area */}
         <main className="flex-1 overflow-y-auto px-6 sm:px-10 pb-10 custom-scrollbar">
           <div className="h-full flex flex-col items-center justify-center bg-white/40 backdrop-blur-[2px] rounded-[2.5rem] border border-stone-200/50 shadow-inner my-2 animate-in fade-in zoom-in-95 duration-700">
-            {/* The EmptyState component will now sit within a soft, 
-                inset container to make the "Shared" screen feel 
-                intentional even when empty.
-            */}
+          
             <EmptyState type="shared" />
           </div>
         </main>

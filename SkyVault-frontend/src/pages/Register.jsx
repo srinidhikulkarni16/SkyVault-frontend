@@ -95,7 +95,7 @@ const Register = () => {
                   value={form.name}
                   onChange={onChange}
                   required
-                  placeholder="John Doe"
+                  placeholder="Srinidhi"
                   className="w-full pl-11 pr-4 py-3 rounded-xl border border-stone-300 bg-white focus:outline-none focus:border-lime-700 focus:ring-4 focus:ring-lime-700/10 transition-all duration-300 shadow-sm"
                 />
               </div>

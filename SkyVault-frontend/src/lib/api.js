@@ -56,14 +56,12 @@ export const folderAPI = {
 
 export const starAPI = {
   getStarred: ()         => api.get('/stars'),
-  // ✅ snake_case matches starValidation and starController
   star:   (type, id) => api.post('/stars', { resource_type: type, resource_id: id }),
   unstar: (type, id) => api.delete(`/stars/${type}/${id}`),
 }
 
 export const trashAPI = {
   getTrash: () => api.get('/trash'),
-  // ✅ POST /trash/restore with body — matches trashController.restoreItem
   restore: (type, id) => api.post('/trash/restore', {
     resource_type: type,
     resource_id:   id,
@@ -71,16 +69,13 @@ export const trashAPI = {
     id,
   }),
   permanentDelete: (type, id) => api.delete(`/trash/${type}/${id}`),
-  // ✅ /trash/empty route added in trashRoutes.js
   emptyTrash: () => api.delete('/trash/empty'),
 }
 
 export const shareAPI = {
   getShares:        (type, id) => api.get(`/shares/${type}/${id}`),
-  // ✅ POST /shares (not /shares/user) + snake_case matches shareValidation
   shareWithUser:    (data)     => api.post('/shares', data),
   createPublicLink: (data)     => api.post('/shares/link', data),
-  // ✅ DELETE /shares/:id (not /shares/user/:id)
   deleteShare:      (id)       => api.delete(`/shares/${id}`),
   deletePublicLink: (id)       => api.delete(`/shares/link/${id}`),
   accessPublicLink: (token, pwd) =>

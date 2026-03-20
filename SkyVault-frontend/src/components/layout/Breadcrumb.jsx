@@ -7,7 +7,6 @@ import { cn } from '../../lib/utils';
 const Breadcrumb = () => {
   const { breadcrumbs } = useFileStore();
   
-  // Return a minimal spacer if no breadcrumbs to maintain layout height consistency
   if (!breadcrumbs?.length) return <div className="h-12 shrink-0" />;
 
   return (
@@ -19,7 +18,6 @@ const Breadcrumb = () => {
 
         return (
           <React.Fragment key={crumb.id || 'root'}>
-            {/* Earthy separator icon */}
             {!isFirst && (
               <ChevronRight 
                 size={14} 
